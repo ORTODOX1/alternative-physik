@@ -16,6 +16,7 @@ from lenr_constants import (
     SCREENING_EXPERIMENTAL, LATTICE, DIFFUSION, LOADING,
     EXCESS_HEAT_DATA, EQPET_SCREENING, BARRIER_FACTORS,
     MIZUNO_R19_DATA, MIZUNO_EMPIRICAL,
+    MIZUNO_NEUTRON_EXPERIMENTS, MIZUNO_NEUTRON_REACTOR,
     diffusion_coefficient, enhancement_factor, cross_section_DD,
 )
 
@@ -289,6 +290,80 @@ class LENRDataGenerator:
 
         return pd.DataFrame(records)
 
+    def generate_neutron_dataframe(self) -> pd.DataFrame:
+        """Convert Mizuno SUS304+H₂ neutron experiments (10 points) to ML-ready DataFrame.
+
+        Key difference from R19: uses hydrogen (not deuterium), SUS304 steel (not Ni+Pd).
+        Neutrons at 0.7 MeV — supports Widom-Larsen ULMN theory.
+        """
+        records = []
+        lat = LATTICE.get('SUS304', LATTICE['Fe'])
+        # SUS304 is Fe-Cr-Ni alloy — use Fe screening as approximation
+        Us_Fe = SCREENING_EXPERIMENTAL.get('Fe', {}).get('Us_eV', 200)
+
+        for exp in MIZUNO_NEUTRON_EXPERIMENTS:
+            T_K = exp['temp_C'] + 273.15
+            # Thermal energy in keV (gas loading, no beam)
+            E_cm_keV = max(8.617e-5 * T_K / 1000.0, 0.01)
+            pressure_Pa = MIZUNO_NEUTRON_REACTOR['initial_pressure_Pa']
+
+            # Diffusion (use Fe as proxy for SUS304)
+            try:
+                D_coeff = diffusion_coefficient('Fe', T_K)
+            except Exception:
+                D_coeff = 1e-10
+
+            enh = enhancement_factor(E_cm_keV, Us_Fe)
+            sigma_bare = cross_section_DD(E_cm_keV)
+            sigma_log = np.log10(max(sigma_bare, 1e-50))
+
+            barrier_results = {}
+            for mode_name, engine in self.engines.items():
+                br = engine.calculate_barrier('Fe', E_cm_keV, T_K, 0.01)
+                barrier_results[mode_name] = br
+
+            record = {
+                'material': 'SUS304',
+                'material_encoded': hash('SUS304') % 100,
+                'structure': lat['structure'],
+                'lattice_constant_A': lat['a_A'],
+                'debye_temperature_K': lat['debye_K'],
+                'electron_density_A3': lat.get('e_density_A3', 0.14),
+                'screening_energy_eV': Us_Fe,
+                'beam_energy_keV': E_cm_keV,
+                'temperature_K': T_K,
+                'deuterium_loading': 0.01,  # H₂ loading, very low
+                'pressure_Pa': pressure_Pa,
+                'diffusion_coefficient': D_coeff,
+                'enhancement_factor': enh,
+                'log_cross_section': sigma_log,
+                'barrier_reduction_maxwell': barrier_results['maxwell'].effective_barrier_keV / max(barrier_results['maxwell'].barrier_keV, 1),
+                'barrier_reduction_coulomb': barrier_results['coulomb_original'].effective_barrier_keV / max(barrier_results['coulomb_original'].barrier_keV, 1),
+                'barrier_reduction_cherepanov': barrier_results['cherepanov'].effective_barrier_keV / max(barrier_results['cherepanov'].barrier_keV, 1),
+                'penetration_maxwell': barrier_results['maxwell'].penetration_probability,
+                'penetration_coulomb': barrier_results['coulomb_original'].penetration_probability,
+                'penetration_cherepanov': barrier_results['cherepanov'].penetration_probability,
+                'rate_maxwell': barrier_results['maxwell'].reaction_rate_relative,
+                'rate_coulomb': barrier_results['coulomb_original'].reaction_rate_relative,
+                'rate_cherepanov': barrier_results['cherepanov'].reaction_rate_relative,
+                'log_rate_maxwell': np.log10(max(barrier_results['maxwell'].reaction_rate_relative, 1e-300)),
+                'log_rate_coulomb': np.log10(max(barrier_results['coulomb_original'].reaction_rate_relative, 1e-300)),
+                'log_rate_cherepanov': np.log10(max(barrier_results['cherepanov'].reaction_rate_relative, 1e-300)),
+                'above_loading_threshold': 0,
+                'above_storms_threshold': 0,
+                # Labels — neutron experiments show nuclear activity
+                'reaction_occurred': 1,
+                'reaction_probability': 1.0,
+                'excess_heat_W': MIZUNO_NEUTRON_REACTOR['excess_heat_W'],
+                # Neutron-specific
+                'input_power_W': exp['input_W'],
+                'neutron_cpm': exp['neutron_cpm'],
+                'data_source': 'mizuno_neutron_SUS304',
+            }
+            records.append(record)
+
+        return pd.DataFrame(records)
+
     def generate_experimental_dataframe(self) -> pd.DataFrame:
         """Convert real experimental data to DataFrame."""
         records = []
@@ -318,11 +393,13 @@ class LENRDataGenerator:
         n_synthetic: int = 5000,
         noise_level: float = 0.05,
         include_mizuno: bool = True,
+        include_neutron: bool = True,
     ) -> pd.DataFrame:
         """Generate combined real + synthetic dataset.
 
         Args:
             include_mizuno: Include 53 real Mizuno R19 data points (recommended).
+            include_neutron: Include 10 Mizuno SUS304 neutron experiments.
         """
         synthetic = self.generate_parameter_sweep(n_synthetic, noise_level)
         experimental = self.generate_experimental_dataframe()
@@ -336,6 +413,10 @@ class LENRDataGenerator:
         if include_mizuno:
             mizuno = self.generate_mizuno_dataframe()
             frames.append(mizuno)
+
+        if include_neutron:
+            neutron = self.generate_neutron_dataframe()
+            frames.append(neutron)
 
         # Find common columns across all frames
         common_cols = set(frames[0].columns)

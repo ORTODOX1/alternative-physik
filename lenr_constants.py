@@ -106,6 +106,9 @@ LATTICE = {
             'e_density_A3': 0.085},
     'Ag': {'structure': 'FCC', 'a_A': 4.0853, 'r_atom_A': 1.445, 'debye_K': 225,
             'e_density_A3': 0.059},
+    # SUS304 (AISI 304) stainless steel — Mizuno neutron experiments
+    'SUS304': {'structure': 'FCC', 'a_A': 3.5950, 'r_atom_A': 1.27, 'debye_K': 400,
+               'e_density_A3': 0.14, 'composition': 'Fe69-Cr19-Ni10-Mn2'},
 }
 
 # Deuterium diffusion: D(T) = D0 * exp(-Ea / kB*T)
@@ -293,9 +296,16 @@ WIDOM_LARSEN = {
 
 # Neutron observations (European J. Applied Physics, Aug 2025)
 NEUTRON_DATA = {
-    'classical_DD_2_45_MeV': {'observed': False, 'notes': 'Expected from D+D->3He+n, NOT seen'},
-    'ULMN_0_7_MeV': {'observed': True, 'notes': 'Ultra-Low-Momentum neutrons detected'},
+    'classical_DD_2_45_MeV': {'observed': False, 'notes': 'Expected from D+D->3He+n, NOT seen in any LENR experiment'},
+    'ULMN_0_7_MeV': {'observed': True, 'notes': 'Ultra-Low-Momentum neutrons detected at 0.7 MeV peak'},
     'implication': 'Mechanism is NOT classical D-D fusion',
+    'SUS304_neutrons': {
+        'gas': 'H2',  # hydrogen, not deuterium — important distinction
+        'threshold_C': 440,
+        'peak_energy_MeV': 0.7,
+        'rate_driver': 'dT/dt (temperature change rate)',
+        'notes': 'Neutrons from H₂+metal (no deuterium!) → supports Widom-Larsen ULMN theory',
+    },
 }
 
 # Screening potential ranges (for ML feature engineering)
@@ -304,6 +314,124 @@ SCREENING_RANGES = {
     'Pd_metal_low_loading_eV': (200, 300),
     'Pd_metal_optimal_eV': (400, 750),
     'cluster_fusion_enhancement': 1e26,  # coherent deuteron motion (Takahashi)
+}
+
+# =============================================================================
+# MIZUNO NEUTRON EXPERIMENTS (SUS304 + H₂, 2020-2025)
+# Source: "Neutrons Produced by Heating Processed Metals"
+# European J. Applied Physics, Aug 2025
+# DOI: eu-opensci.org/index.php/ejphysics/article/view/11383
+# Reactor: SUS304 stainless steel cylinder (10cm×40cm, 12.7kg), H₂ gas
+# Detector: NE213 liquid scintillator, rise time discrimination
+# =============================================================================
+MIZUNO_NEUTRON_EXPERIMENTS = [
+    # (date, input_W, temp_C, neutron_count_per_min)
+    {'date': '2020-11-29', 'input_W': 724, 'temp_C': 764, 'neutron_cpm': 0.803},
+    {'date': '2024-08-05', 'input_W': 478, 'temp_C': 589, 'neutron_cpm': 0.415},
+    {'date': '2024-10-21', 'input_W': 584, 'temp_C': 727, 'neutron_cpm': 0.803},
+    {'date': '2024-10-29', 'input_W': 699, 'temp_C': 783, 'neutron_cpm': 1.972},
+    {'date': '2024-11-19', 'input_W': 547, 'temp_C': 562, 'neutron_cpm': 0.250},
+    {'date': '2024-11-20', 'input_W': 720, 'temp_C': 622, 'neutron_cpm': 1.554},
+    {'date': '2024-11-25', 'input_W': 725, 'temp_C': 783, 'neutron_cpm': 0.826},
+    {'date': '2024-11-29', 'input_W': 724, 'temp_C': 764, 'neutron_cpm': 1.064},
+    {'date': '2025-04-14', 'input_W': 720, 'temp_C': 760, 'neutron_cpm': 1.060},
+    {'date': '2025-04-15', 'input_W': 729, 'temp_C': 758, 'neutron_cpm': 1.198},
+]
+
+MIZUNO_NEUTRON_REACTOR = {
+    'material': 'SUS304',  # AISI 304 stainless steel
+    'composition': {'Fe': 0.69, 'Cr': 0.19, 'Ni': 0.10, 'Mn': 0.02},
+    'dimensions_cm': {'diameter': 10, 'length': 40, 'thickness': 0.2},
+    'total_mass_kg': 12.7,
+    'gas': 'H2',  # hydrogen (NOT deuterium)
+    'initial_pressure_Pa': 500,
+    'heater_W': 600,  # 100V, 600W sheath heater
+    'surface_treatment': 'mesh_400_buffed',
+    'excess_heat_W': 200,      # reported excess
+    'excess_heat_error_W': 2,  # ±2W
+    'output_ratio': 1.25,      # output/input = 1.25
+}
+
+MIZUNO_NEUTRON_PHYSICS = {
+    'peak_energy_MeV': 0.7,           # observed neutron peak
+    'classical_DD_MeV': 2.45,         # NOT observed
+    'threshold_temp_C': 440,          # neutrons start appearing
+    'detector': 'NE213_liquid_scintillator',
+    'detector_size_cm': 12.7,         # diameter = thickness
+    'background_cph': 5,              # counts per hour
+    'foreground_600C_cph': 24,        # counts per hour at 600°C
+    'max_rate_cpm': 5,                # max observed counts/min
+    'key_finding': 'rate correlates with dT/dt (temperature change rate), not just T',
+    'calibration_source': '252Cf_96.5_mCi',
+}
+
+# =============================================================================
+# HEAT-AFTER-DEATH DETAILED CHRONOLOGY (1991)
+# Source: Mizuno, "Nuclear Transmutation: The Reality of Cold Fusion"
+# Translation: Jed Rothwell, Infinite Energy Press
+# =============================================================================
+MIZUNO_HEAT_AFTER_DEATH = {
+    'date': '1991-04-22',
+    'total_energy_MJ': 85,
+    'Pd_mass_g': 100,
+    'energy_density_kJg': 850,  # 27x gasoline equivalent
+    'water_evaporated_L': 37.5,
+    'duration_days': 15,
+    'total_experiment_energy_MJ': 114,  # entire experiment including electrolysis
+    'energy_vs_gasoline': 27,           # times more energy than equivalent mass of gasoline
+    'chronology': [
+        {'date': '1991-03-XX', 'event': 'experiment_start', 'notes': 'New closed cell experiment begins'},
+        {'date': '1991-04-XX', 'event': 'excess_heat_detected', 'notes': 'Small but significant excess heat'},
+        {'date': '1991-04-22', 'event': 'electrolysis_stopped', 'notes': 'External power disconnected'},
+        {'date': '1991-04-25', 'event': 'heat_after_death_confirmed',
+         'energy_since_shutoff_J': 1.2e7, 'temp_above_ambient': True,
+         'notes': 'Cell moved from underground lab, temp >100°C'},
+        {'date': '1991-04-26', 'event': 'bucket_15L', 'notes': 'Cell in 15L bucket, temperature not declining'},
+        {'date': '1991-04-27', 'event': 'evaporation_10L', 'water_evaporated_L': 10,
+         'notes': 'Transferred to 20L bucket, submerged in 15L water'},
+        {'date': '1991-04-30', 'event': 'evaporation_10L', 'water_evaporated_L': 10,
+         'notes': 'Water replenished to 15L'},
+        {'date': '1991-05-01', 'event': 'water_added', 'water_added_L': 5},
+        {'date': '1991-05-02', 'event': 'water_added', 'water_added_L': 5},
+        {'date': '1991-05-07', 'event': 'cell_cool', 'water_remaining_L': 7.5,
+         'notes': 'Cell finally cool. Total evaporation: 37.5L'},
+    ],
+    'stasis_effect': {
+        'description': 'After external heater turned off, heat-after-death increased '
+                       'to compensate for loss of external heat, maintaining constant temperature',
+        'notes': 'Pons observed similar "memory" effect — temperature returns to fixed level after perturbation',
+        'storms_hypothesis': 'Special configuration of matter with densely packed deuterium; '
+                             'diffusion rate slower at high T than usual beta-phase PdD',
+    },
+    'heat_of_vaporization_J_per_g': 2268,  # 540 cal/g
+}
+
+# =============================================================================
+# NUCLEAR TRANSMUTATION DATA
+# Source: Mizuno, "Nuclear Transmutation" book; ICCF papers
+# =============================================================================
+TRANSMUTATION = {
+    'host_metal_reactions': {
+        'description': 'Cathode metal itself undergoes nuclear reactions (fission + fusion)',
+        'Pd_products': ['Cu', 'Zn', 'Fe', 'Cr', 'Ca'],  # observed transmutation products
+        'isotope_anomaly': True,  # non-natural isotopic distributions observed
+        'notes': 'Anomalous isotopes found around eruption sites on cathode surface',
+    },
+    'surface_eruptions': {
+        'description': 'Lily-shaped eruptions on cathode surface from subsurface reactions',
+        'materials_observed': ['Au', 'Pd'],  # Ohmori gold cathodes, Mizuno Pd cathodes
+        'mechanism': 'Violent reaction under metal surface vaporizes metal, spews it out',
+        'transmutation_locus': True,  # eruption sites are where transmutations occur
+    },
+    'tritium_production': {
+        'observed': True,
+        'notes': 'Tritium definitively observed in Mizuno experiments (published 1990-1991)',
+    },
+    'blackened_cathode': {
+        'description': 'Black film on Pd cathode after successful run — later recognized as '
+                       'microscopic erupted structures similar to Ohmori gold cathodes',
+        'initially_mistaken_for': 'contamination',
+    },
 }
 
 # =============================================================================
