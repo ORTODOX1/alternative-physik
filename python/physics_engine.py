@@ -59,8 +59,18 @@ class PhysicsEngine:
         E_cm_keV: float,
         T_K: float = 300.0,
         D_loading: float = 0.5,
+        defect_concentration: float = 0.0,
+        B_field_T: float = 0.0,
     ) -> BarrierResult:
-        """Calculate effective barrier and reaction parameters."""
+        """Calculate effective barrier and reaction parameters.
+
+        Parameters
+        ----------
+        defect_concentration : float
+            Fraction of lattice sites with defects (0-1). Used by Cherepanov mode.
+        B_field_T : float
+            External magnetic field in Tesla. Used by Cherepanov mode.
+        """
         Us = self.get_screening(material)
 
         if self.mode == 'maxwell':
@@ -68,7 +78,11 @@ class PhysicsEngine:
         elif self.mode == 'coulomb_original':
             return self._barrier_coulomb_original(material, E_cm_keV, T_K, D_loading, Us)
         else:
-            return self._barrier_cherepanov(material, E_cm_keV, T_K, D_loading, Us)
+            return self._barrier_cherepanov(
+                material, E_cm_keV, T_K, D_loading, Us,
+                defect_concentration=defect_concentration,
+                B_field_T=B_field_T,
+            )
 
     def _barrier_maxwell(self, material, E_cm_keV, T_K, D_loading, Us):
         """Standard electromagnetic: Coulomb barrier with electron screening."""
@@ -111,28 +125,21 @@ class PhysicsEngine:
             penetration_probability=P,
             reaction_rate_relative=rate,
             screening_eV=Us * (1 + mass_density_factor * 0.5),
-            notes=f'Mass density ρ_e={e_density:.3f}, barrier={barrier:.0f} keV',
+            notes=f'Mass density rho_e={e_density:.3f}, barrier={barrier:.0f} keV',
         )
 
-    def _barrier_cherepanov(self, material, E_cm_keV, T_K, D_loading, Us):
-        """Cherepanov: no charge, photon mass, magnetic flux interactions."""
-        magnetic_resistance = 50 + (1 - D_loading) * 200
-        phonon_coupling = np.exp(-T_K / 500) * 100
-        eff_barrier = max(magnetic_resistance - phonon_coupling, 0.1)
+    def _barrier_cherepanov(self, material, E_cm_keV, T_K, D_loading, Us,
+                            defect_concentration=0.0, B_field_T=0.0):
+        """Cherepanov: no charge, photon mass, magnetic flux interactions.
 
-        P = float(np.exp(-eff_barrier / (E_cm_keV + 0.001)))
-        P = min(P, 1.0)
-        loading_boost = (D_loading / 0.5) ** 8 if D_loading > 0.5 else 0.001
-        rate = min(P * loading_boost, 1.0)
-
-        return BarrierResult(
-            mode='cherepanov',
-            barrier_keV=magnetic_resistance,
-            effective_barrier_keV=eff_barrier,
-            penetration_probability=P,
-            reaction_rate_relative=rate,
-            screening_eV=0,
-            notes=f'No charge. Medium resistance {magnetic_resistance:.0f} keV, photon mass',
+        Delegates to CherepanovEngine for real physics calculation.
+        """
+        from cherepanov_engine import CherepanovEngine
+        engine = CherepanovEngine()
+        return engine.calculate_barrier(
+            material, E_cm_keV, T_K, D_loading,
+            defect_concentration=defect_concentration,
+            B_field_T=B_field_T,
         )
 
     def cross_section_bare(self, E_cm_keV: float) -> float:

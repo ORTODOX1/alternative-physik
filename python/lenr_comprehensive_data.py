@@ -98,7 +98,7 @@ MATERIALS_EXPANDED = {
         'fermi_energy_eV': 7.47,
         'e_density_A3': 0.170,
         'n_valence': 8,
-        'magnetic_susceptibility': 'ferromagnetic',
+        'magnetic_susceptibility': 1.0,  # ferromagnetic (saturated)
         'hydrogen_solubility': 'very_low',
         'max_H_loading': 0.0001,
         'D0_cm2s': 7.4e-4, 'Ea_diffusion_eV': 0.041,
@@ -826,6 +826,20 @@ FEATURE_COLUMNS_V2 = {
     ],
 }
 
+# V3 Cherepanov features (8 features) — alternative physics framework
+FEATURE_COLUMNS_CHEREPANOV = {
+    'cherepanov_group': [
+        'magnetic_susceptibility_abs',   # |chi_m| of host material
+        'photon_mass_density',           # rho_gamma accumulated in lattice
+        'photon_mass_density_critical',  # threshold for reaction
+        'medium_resistance',             # replaces Coulomb barrier
+        'lattice_focusing_factor',       # crystal channeling efficiency
+        'defect_concentration',          # fraction of defect sites (0-1)
+        'magnetic_flux_B_kg_s',          # B [kg/s] — photon mass flow
+        'photon_phonon_coupling',        # phonon-photon mass interaction
+    ],
+}
+
 # Target variables for multi-task learning
 TARGET_COLUMNS_V2 = {
     'classification': [
@@ -846,9 +860,17 @@ TARGET_COLUMNS_V2 = {
 
 
 def get_feature_columns_v2() -> list[str]:
-    """Return flattened list of all V2 feature column names."""
+    """Return flattened list of all V2 feature column names (64 features)."""
     cols = []
     for group_cols in FEATURE_COLUMNS_V2.values():
+        cols.extend(group_cols)
+    return cols
+
+
+def get_feature_columns_v3() -> list[str]:
+    """Return flattened list of all V3 feature column names (72 = 64 V2 + 8 Cherepanov)."""
+    cols = get_feature_columns_v2()
+    for group_cols in FEATURE_COLUMNS_CHEREPANOV.values():
         cols.extend(group_cols)
     return cols
 

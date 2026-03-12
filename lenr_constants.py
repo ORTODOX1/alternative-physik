@@ -484,6 +484,44 @@ PHYSICS_MODES = {
     },
 }
 
+# =============================================================================
+# CHEREPANOV FRAMEWORK CONSTANTS
+# =============================================================================
+# Based on: Cherepanov A.I. analysis of Maxwell errors, pp.39-44
+# Coulomb 1785 original: F = k*(rho1*rho2)/r^2
+# No charge. No electric field. No electrons/protons/neutrons as charged.
+# Magnetic flux B[kg/s] = current = light = all radiation.
+
+CHEREPANOV_CONSTANTS = {
+    # Photon mass density in vacuum [kg/m^3]
+    'RHO_GAMMA_VACUUM': 1.0e-18,
+    # Base medium resistance (vacuum analog of Coulomb barrier) [dimensionless]
+    'R_MEDIUM_BASE': 1000.0,
+    # Magnetic flux quantum B[kg/s]
+    'B_QUANTUM': 1e-15,
+    # Reaction threshold parameters (Weibull-like: P = 1 - exp(-k*(x-1)^n))
+    'REACTION_THRESHOLD_K': 3.0,
+    'REACTION_THRESHOLD_N': 2.0,
+    # Structure factors (crystal symmetry → photon mass channeling)
+    'STRUCTURE_FACTOR_FCC': 1.0,   # best channels (octahedral + tetrahedral)
+    'STRUCTURE_FACTOR_BCC': 0.7,   # fewer interstitial sites
+    'STRUCTURE_FACTOR_HCP': 0.5,   # least favorable
+    # Magnetic class factors (amplification of photon mass accumulation)
+    'MAG_FACTOR_FERROMAGNETIC': 10.0,  # Ni, Fe, Co
+    'MAG_FACTOR_PARAMAGNETIC': 2.0,    # Ti, Pt, W
+    'MAG_FACTOR_DIAMAGNETIC': 0.5,     # Pd, Au, Cu
+    # Key experimental validations
+    'CZERSKI_2023_Pd_COLD_ROLLED_eV': 18200,   # 728x standard prediction
+    'CZERSKI_2023_Pd_SOFT_eV': 3200,            # still 128x standard
+    'KASAGI_PdO_eV': 600,                        # oxide layer = photon mass lens
+    'KASAGI_Pd_eV': 310,
+    # Defect concentration → medium resistance reduction factor
+    # f_defect = 1 / (1 + defects * 100)
+    # cold_rolled (0.5) → f = 0.0196 → ~50x reduction
+    # annealed (0.005) → f = 0.667 → barely reduced
+    'DEFECT_SENSITIVITY': 100.0,
+}
+
 
 # =============================================================================
 # HELPER FUNCTIONS

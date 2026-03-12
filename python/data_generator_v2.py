@@ -1,7 +1,10 @@
 """
-LENR Data Generator V2 — Multi-Process Feature Generation
-==========================================================
-Generates training data with 64+ features covering ALL physical processes:
+LENR Data Generator V2/V3 — Multi-Process Feature Generation
+=============================================================
+V2: 64 features, 10 targets (backward compatible)
+V3: 72 features = 64 V2 + 8 Cherepanov group (alternative physics)
+
+Feature groups:
   - Material properties (15 features)
   - Loading & diffusion (10 features)
   - Barrier & screening (12 features)
@@ -10,10 +13,13 @@ Generates training data with 64+ features covering ALL physical processes:
   - Surface & nanostructure (6 features)
   - Stimulation effects (4 features)
   - Time dynamics (4 features)
+  - [V3] Cherepanov physics (8 features): photon mass, medium resistance, etc.
 
 Supports multi-task learning with 10 targets:
   - 6 classification (reaction, heat, neutron, tritium, He4, transmutation)
   - 4 regression (excess_heat_W, COP, neutron_rate, energy_density)
+
+V3 also supports EXFOR data integration (~2000+ experimental D-D points).
 """
 
 import numpy as np
@@ -35,14 +41,32 @@ from lenr_comprehensive_data import (
     MATERIALS_EXPANDED, SCREENING_COMPLETE, EXCESS_HEAT_COMPREHENSIVE,
     NUCLEAR_PRODUCTS_DATA, TRANSMUTATION_DATA, LOADING_DYNAMICS,
     THERMAL_DYNAMICS_DATA, SURFACE_EFFECTS_DATA, EM_STIMULATION_DATA,
-    FEATURE_COLUMNS_V2, TARGET_COLUMNS_V2,
+    FEATURE_COLUMNS_V2, FEATURE_COLUMNS_CHEREPANOV, TARGET_COLUMNS_V2,
     STRUCTURE_ENCODING, METHOD_ENCODING, ELECTROLYTE_ENCODING,
     SURFACE_ENCODING, ISOTOPE_ENCODING, PHASE_ENCODING,
-    get_feature_columns_v2, get_all_materials,
+    get_feature_columns_v2, get_feature_columns_v3, get_all_materials,
 )
+from cherepanov_engine import CherepanovEngine, cherepanov_features, MATERIAL_MAGNETIC
+from exfor_loader import EXFORLoader
 
 kB_eV = 8.617e-5  # eV/K
 kB_meV = kB_eV * 1000  # meV/K
+
+# Surface state → defect concentration mapping for Cherepanov engine
+SURFACE_TO_DEFECTS = {
+    'cold_rolled':     0.50,
+    'nano':            0.30,
+    'irradiated':      0.25,
+    'sputtered':       0.20,
+    'oxidized':        0.15,
+    'mesh':            0.10,
+    'mesh_400_buffed': 0.08,
+    'multilayer':      0.12,
+    'polished':        0.03,
+    'polycrystal':     0.05,
+    'annealed':        0.005,
+    'none':            0.05,  # default polycrystalline
+}
 
 
 class LENRDataGeneratorV2:
@@ -59,6 +83,8 @@ class LENRDataGeneratorV2:
             mode: PhysicsEngine(mode)
             for mode in ('maxwell', 'coulomb_original', 'cherepanov')
         }
+        self.cherepanov = CherepanovEngine()
+        self.exfor_loader = EXFORLoader()
 
     # =========================================================================
     # MATERIAL FEATURE EXTRACTION
@@ -136,6 +162,59 @@ class LENRDataGeneratorV2:
         elif material == 'Ti':
             return loading * 5.0  # large expansion
         return loading * 2.0  # generic
+
+    # =========================================================================
+    # V3: CHEREPANOV FEATURES (8 features)
+    # =========================================================================
+    def _get_cherepanov_features(
+        self,
+        material: str,
+        T_K: float,
+        D_loading: float,
+        surface: str = 'none',
+        B_field_T: float = 0.0,
+        E_cm_keV: float = 0.025,
+    ) -> dict:
+        """Calculate 8 Cherepanov-framework features for V3 pipeline.
+
+        Returns dict with keys matching FEATURE_COLUMNS_CHEREPANOV.
+        """
+        # Resolve defect concentration from surface state
+        defect_conc = SURFACE_TO_DEFECTS.get(surface, 0.05)
+
+        # Base material (strip suffixes for engine lookup)
+        base_mat = material
+        for suffix in ('_Raiola', '_Huke', '_Kasagi', '_Czerski'):
+            base_mat = base_mat.replace(suffix, '')
+        if base_mat.startswith('nano_'):
+            base_mat = base_mat[5:]
+        if base_mat.startswith('PdNi_'):
+            base_mat = 'Pd'
+        if base_mat == 'NiCu':
+            base_mat = 'Ni'
+        if base_mat == 'NiPd':
+            base_mat = 'Ni'
+
+        try:
+            cr = self.cherepanov.calculate(
+                base_mat, E_cm_keV, T_K, D_loading,
+                B_field_T=B_field_T,
+                defect_concentration=defect_conc,
+            )
+        except Exception:
+            cr = self.cherepanov.calculate(
+                'Pd', E_cm_keV, T_K, D_loading,
+                B_field_T=B_field_T,
+                defect_concentration=defect_conc,
+            )
+
+        feats = cherepanov_features(cr)
+
+        # Fill magnetic_susceptibility_abs from material database
+        mag = MATERIAL_MAGNETIC.get(base_mat, {'chi_m': 1e-6})
+        feats['magnetic_susceptibility_abs'] = abs(mag['chi_m'])
+
+        return feats
 
     # =========================================================================
     # BARRIER & SCREENING CALCULATIONS
@@ -379,6 +458,11 @@ class LENRDataGeneratorV2:
             # Barrier features
             barrier_feats = self._calc_barrier_features(material, E_cm_keV, T_K, D_loading)
 
+            # V3: Cherepanov features
+            cherep_feats = self._get_cherepanov_features(
+                material, T_K, D_loading, surface, B_field, E_cm_keV,
+            )
+
             # Diffusion
             try:
                 D_coeff = self._calc_diffusion(material, T_K)
@@ -472,6 +556,8 @@ class LENRDataGeneratorV2:
                 'incubation_time_hours': incubation_hours,
                 'COP': COP_val,
                 'data_source_encoded': 0,  # synthetic
+                # V3: Cherepanov features
+                **cherep_feats,
                 # Labels
                 **labels,
                 'excess_heat_W': excess_W,
@@ -528,9 +614,15 @@ class LENRDataGeneratorV2:
             multilayer = 'multilayer' in substrate or 'CaO' in substrate
             n_layers_val = exp.get('n_layers', 200 if multilayer else 0)
             surf_enc = 5 if nano else (6 if multilayer else 0)
+            surface_state = 'nano' if nano else ('multilayer' if multilayer else 'none')
 
             duration = exp.get('duration_hours', 100)
             input_W_est = excess_W / max(COP - 1, 0.01) if COP > 1 else excess_W * 5
+
+            # V3: Cherepanov features
+            cherep_feats = self._get_cherepanov_features(
+                material, T_K, D_loading, surface_state, 0.0, E_cm_keV,
+            )
 
             record = {
                 'material': material,
@@ -574,6 +666,8 @@ class LENRDataGeneratorV2:
                 'incubation_time_hours': 0,
                 'COP': COP,
                 'data_source_encoded': 1,
+                # V3: Cherepanov features
+                **cherep_feats,
                 # Labels
                 'reaction_occurred': 1,
                 'excess_heat_detected': 1,
@@ -619,6 +713,11 @@ class LENRDataGeneratorV2:
 
             COP = m['COP'] or 1.0
 
+            # V3: Cherepanov features (mesh surface = 0.10 defects)
+            cherep_feats = self._get_cherepanov_features(
+                'Ni', T_K, D_loading, 'mesh', 0.0, E_cm_keV,
+            )
+
             record = {
                 'material': 'NiPd',
                 **mat_props,
@@ -660,6 +759,8 @@ class LENRDataGeneratorV2:
                 'incubation_time_hours': 0,
                 'COP': COP,
                 'data_source_encoded': 2,
+                # V3: Cherepanov features
+                **cherep_feats,
                 # Labels
                 'reaction_occurred': 1,
                 'excess_heat_detected': 1,
@@ -697,6 +798,11 @@ class LENRDataGeneratorV2:
                 D_coeff = self._calc_diffusion('Fe', T_K)
             except Exception:
                 D_coeff = 1e-10
+
+            # V3: Cherepanov (SUS304 ~ Fe-based, mesh_400_buffed surface)
+            cherep_feats = self._get_cherepanov_features(
+                'Fe', T_K, 0.001, 'mesh_400_buffed', 0.0, E_cm_keV,
+            )
 
             record = {
                 'material': 'SUS304',
@@ -739,6 +845,8 @@ class LENRDataGeneratorV2:
                 'incubation_time_hours': 2,
                 'COP': MIZUNO_NEUTRON_REACTOR['output_ratio'],
                 'data_source_encoded': 3,
+                # V3: Cherepanov features
+                **cherep_feats,
                 # Labels
                 'reaction_occurred': 1,
                 'excess_heat_detected': 1,
@@ -758,6 +866,152 @@ class LENRDataGeneratorV2:
         return pd.DataFrame(records)
 
     # =========================================================================
+    # V3: EXFOR DATA INTEGRATION
+    # =========================================================================
+    def generate_exfor_data(self) -> pd.DataFrame:
+        """Convert EXFOR D-D cross-section data to V3 feature format.
+
+        Each EXFOR point becomes a row with:
+        - Material features (gas target = default Pd-like)
+        - Barrier/screening features computed at the measured energy
+        - Cherepanov features computed for the target condition
+        - Cross-section as a target (mapped to reaction probability)
+        """
+        exfor_df = self.exfor_loader.get_cached_or_download()
+        if exfor_df is None or len(exfor_df) == 0:
+            return pd.DataFrame()
+
+        records = []
+        # Default material features for gas-phase D-D
+        mat_props_gas = self._get_material_features('Pd')
+
+        for _, row in exfor_df.iterrows():
+            E_cm_keV = row['energy_keV']
+            if E_cm_keV <= 0 or E_cm_keV > 500:
+                continue
+
+            xs_mb = row['cross_section_mb']
+            target = row.get('target', 'D2_gas')
+
+            # Determine material context: gas or metal target
+            if 'Pd' in target:
+                material = 'Pd'
+                surface = 'polycrystal'
+                D_loading = 0.5
+            elif 'Ni' in target:
+                material = 'Ni'
+                surface = 'polycrystal'
+                D_loading = 0.01
+            elif 'Fe' in target:
+                material = 'Fe'
+                surface = 'polycrystal'
+                D_loading = 0.001
+            elif 'Ti' in target:
+                material = 'Ti'
+                surface = 'polycrystal'
+                D_loading = 0.1
+            elif 'Ta' in target:
+                material = 'Ta'
+                surface = 'polycrystal'
+                D_loading = 0.05
+            else:
+                # Gas-phase D-D: use Pd as proxy host
+                material = 'Pd'
+                surface = 'none'
+                D_loading = 0.0
+
+            T_K = 300.0  # room temperature for beam experiments
+            mat_props = self._get_material_features(
+                material if material in MATERIALS_EXPANDED else 'Pd'
+            )
+
+            barrier_feats = self._calc_barrier_features(material, E_cm_keV, T_K, D_loading)
+
+            try:
+                D_coeff = self._calc_diffusion(material, T_K)
+            except Exception:
+                D_coeff = 1e-10
+            _, Ea_diff = self._get_diffusion_params(material)
+            debye_K = mat_props['debye_temperature_K']
+
+            # V3: Cherepanov features
+            cherep_feats = self._get_cherepanov_features(
+                material, T_K, D_loading, surface, 0.0, E_cm_keV,
+            )
+
+            # Map cross-section to reaction probability
+            # Higher xs → higher probability (logarithmic mapping)
+            log_xs = np.log10(max(xs_mb, 1e-50))
+            # xs range: ~1e-40 to ~100 mb → map to 0-1
+            reaction_prob = np.clip((log_xs + 40) / 42, 0.0, 0.99)
+
+            # Excess heat estimate from cross-section (proportional)
+            excess_W_est = max(0, xs_mb * 1e-3 * 4.033)  # Q-value scaling
+
+            record = {
+                'material': material,
+                **mat_props,
+                'hydrogen_isotope': 2,  # D2
+                'loading_ratio': D_loading,
+                'max_loading_capacity': self._get_max_loading(material),
+                'loading_method_encoded': 0,  # beam
+                'loading_fraction': D_loading / max(self._get_max_loading(material), 0.01),
+                'above_McKubre_threshold': int(D_loading > 0.84),
+                'above_Storms_threshold': int(D_loading > 0.90),
+                'phase_encoded': self._determine_phase(material, D_loading),
+                'H_absorption_enthalpy_eV': MATERIALS_EXPANDED.get(material, {}).get(
+                    'H_absorption_enthalpy_eV', -0.2),
+                'lattice_expansion_pct': self._lattice_expansion(material, D_loading),
+                **barrier_feats,
+                'temperature_K': T_K,
+                'pressure_Pa': 1e5,
+                'beam_energy_keV': E_cm_keV,
+                'input_power_W': 0,
+                'heating_rate_K_per_min': 0,
+                'diffusion_coefficient': D_coeff,
+                'diffusion_activation_eV': Ea_diff,
+                'thermal_phonon_energy_meV': kB_meV * debye_K,
+                'current_density_A_cm2': 0,
+                'cell_voltage_V': 0,
+                'electrolyte_encoded': 0,
+                'cathode_area_cm2': 0,
+                'overpotential_V': 0,
+                'surface_treatment_encoded': SURFACE_ENCODING.get(surface, 0),
+                'particle_size_nm': 0,
+                'n_layers': 0,
+                'coating_thickness_nm': 0,
+                'surface_area_ratio': 1.0,
+                'nanostructure_flag': 0,
+                'laser_stimulation': 0,
+                'rf_stimulation': 0,
+                'applied_B_field_T': 0,
+                'ultrasound_stimulation': 0,
+                'experiment_duration_hours': 0,
+                'incubation_time_hours': 0,
+                'COP': 1.0,
+                'data_source_encoded': 4,  # EXFOR
+                # V3: Cherepanov features
+                **cherep_feats,
+                # Labels (derived from cross-section magnitude)
+                'reaction_occurred': int(reaction_prob > 0.3),
+                'excess_heat_detected': int(reaction_prob > 0.5),
+                'He4_detected': 0,
+                'tritium_detected': int(reaction_prob > 0.3 and 'd(d,p)t' in row.get('reaction', '')),
+                'neutron_detected': int(reaction_prob > 0.3 and 'd(d,n)' in row.get('reaction', '')),
+                'transmutation_detected': 0,
+                'excess_heat_W': excess_W_est,
+                'neutron_rate_cpm': 0,
+                'energy_density_kJ_g': 0,
+                # Metadata
+                'data_source': 'exfor',
+                'method': 'beam',
+                'gas': 'D2',
+            }
+            records.append(record)
+
+        return pd.DataFrame(records)
+
+    # =========================================================================
     # COMBINED DATASET
     # =========================================================================
     def generate_combined(
@@ -767,10 +1021,24 @@ class LENRDataGeneratorV2:
         include_mizuno_r19: bool = True,
         include_mizuno_neutron: bool = True,
         include_real_excess_heat: bool = True,
+        include_exfor: bool = False,
+        use_v3_features: bool = False,
     ) -> pd.DataFrame:
         """Generate combined dataset with all sources.
 
-        Returns DataFrame with 64+ features and 10 targets.
+        Parameters
+        ----------
+        n_synthetic : int
+            Number of synthetic samples to generate.
+        noise_level : float
+            Gaussian noise level for synthetic data.
+        include_exfor : bool
+            If True, include EXFOR D-D cross-section data (~85+ points).
+        use_v3_features : bool
+            If True, use V3 feature set (72 features). If False, drop
+            Cherepanov columns for backward-compatible V2 (64 features).
+
+        Returns DataFrame with 64 (V2) or 72 (V3) features and 10 targets.
         """
         frames = []
 
@@ -797,6 +1065,14 @@ class LENRDataGeneratorV2:
             neutron = self.generate_mizuno_neutron()
             frames.append(neutron)
 
+        # V3: EXFOR data
+        if include_exfor:
+            print("Adding EXFOR D-D cross-section data...")
+            exfor = self.generate_exfor_data()
+            if len(exfor) > 0:
+                print(f"  EXFOR points: {len(exfor)}")
+                frames.append(exfor)
+
         # Find common columns and merge
         common_cols = set(frames[0].columns)
         for f in frames[1:]:
@@ -804,6 +1080,14 @@ class LENRDataGeneratorV2:
         common_cols = sorted(list(common_cols))
 
         combined = pd.concat([f[common_cols] for f in frames], ignore_index=True)
+
+        # V3 feature mode: keep or drop Cherepanov columns
+        if not use_v3_features:
+            cherep_cols = FEATURE_COLUMNS_CHEREPANOV.get('cherepanov_group', [])
+            drop_cols = [c for c in cherep_cols if c in combined.columns]
+            if drop_cols:
+                combined = combined.drop(columns=drop_cols)
+
         print(f"\nCombined dataset: {combined.shape[0]} rows, {combined.shape[1]} columns")
         print(f"  Synthetic: {len(synthetic)}")
         if include_real_excess_heat:
@@ -812,6 +1096,9 @@ class LENRDataGeneratorV2:
             print(f"  Mizuno R19: {len(mizuno)}")
         if include_mizuno_neutron:
             print(f"  Mizuno neutron: {len(neutron)}")
+        if include_exfor and len(exfor) > 0:
+            print(f"  EXFOR: {len(exfor)}")
+        print(f"  V3 features: {'YES (72)' if use_v3_features else 'NO (V2 compat, 64)'}")
 
         return combined
 
@@ -822,6 +1109,11 @@ class LENRDataGeneratorV2:
     def get_feature_columns() -> list[str]:
         """Return all V2 feature column names (64 features)."""
         return get_feature_columns_v2()
+
+    @staticmethod
+    def get_feature_columns_v3() -> list[str]:
+        """Return all V3 feature column names (72 = 64 V2 + 8 Cherepanov)."""
+        return get_feature_columns_v3()
 
     @staticmethod
     def get_classification_targets() -> list[str]:
@@ -841,33 +1133,52 @@ if __name__ == '__main__':
     gen = LENRDataGeneratorV2(seed=42)
 
     print("=" * 60)
-    print("LENR Data Generator V2 — Multi-Process Features")
+    print("LENR Data Generator V2/V3 — Multi-Process Features")
     print("=" * 60)
 
-    # Generate combined dataset
-    df = gen.generate_combined(n_synthetic=2000)
+    # === V2 backward compat ===
+    print("\n--- V2 mode (backward compatible, 64 features) ---")
+    df_v2 = gen.generate_combined(n_synthetic=500, use_v3_features=False)
+    v2_cols = gen.get_feature_columns()
+    v2_present = [c for c in v2_cols if c in df_v2.columns]
+    print(f"V2 feature coverage: {len(v2_present)}/{len(v2_cols)}")
 
-    print(f"\nFeature columns ({len(gen.get_feature_columns())}):")
-    for group, cols in FEATURE_COLUMNS_V2.items():
-        print(f"  {group} ({len(cols)}): {cols}")
+    # === V3 with EXFOR ===
+    print("\n--- V3 mode (72 features + EXFOR) ---")
+    df_v3 = gen.generate_combined(
+        n_synthetic=500,
+        include_exfor=True,
+        use_v3_features=True,
+    )
+    v3_cols = gen.get_feature_columns_v3()
+    v3_present = [c for c in v3_cols if c in df_v3.columns]
+    print(f"V3 feature coverage: {len(v3_present)}/{len(v3_cols)}")
+
+    # Show Cherepanov features
+    cherep_cols = FEATURE_COLUMNS_CHEREPANOV['cherepanov_group']
+    print(f"\nCherepanov features in V3:")
+    for col in cherep_cols:
+        if col in df_v3.columns:
+            vals = df_v3[col]
+            print(f"  {col}: min={vals.min():.4e}, mean={vals.mean():.4e}, max={vals.max():.4e}")
 
     print(f"\nClassification targets: {gen.get_classification_targets()}")
     print(f"Regression targets: {gen.get_regression_targets()}")
 
     print(f"\nDataset statistics:")
-    print(f"  Total rows: {len(df)}")
-    print(f"  Total columns: {len(df.columns)}")
+    print(f"  V2 total rows: {len(df_v2)}, columns: {len(df_v2.columns)}")
+    print(f"  V3 total rows: {len(df_v3)}, columns: {len(df_v3.columns)}")
 
     # Stats per target
     for target in gen.get_classification_targets():
-        if target in df.columns:
-            print(f"  {target}: {df[target].mean():.1%} positive")
+        if target in df_v3.columns:
+            print(f"  {target}: {df_v3[target].mean():.1%} positive")
 
     for target in gen.get_regression_targets():
-        if target in df.columns:
-            vals = df[df[target] > 0][target]
+        if target in df_v3.columns:
+            vals = df_v3[df_v3[target] > 0][target]
             if len(vals) > 0:
                 print(f"  {target}: mean={vals.mean():.2f}, max={vals.max():.2f}")
 
-    print(f"\nMaterials: {df['material'].value_counts().to_dict()}")
-    print(f"Data sources: {df['data_source'].value_counts().to_dict()}")
+    print(f"\nMaterials: {df_v3['material'].value_counts().to_dict()}")
+    print(f"Data sources: {df_v3['data_source'].value_counts().to_dict()}")
