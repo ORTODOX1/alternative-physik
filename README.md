@@ -32,7 +32,7 @@ alternative-physik/
 |-- axioms/                              # Foundational postulates
 |   |-- 01_criticism_of_standard_model.md   # Maxwell's errors, Coulomb vs Maxwell charge
 |   |-- 02_ether_and_vortex_magnetism.md    # Ether, photon mass, vortex model
-|   +-- 03_from_ether_to_cold_star.md       # Synthesis: ether -> energy -> computing
+|   +-- 05_from_ether_to_cold_star.md       # Axiom 5: ether -> energy -> computing
 |
 |-- experiments/                         # Key experimental evidence
 |   |-- plant_grounding.md                  # Electroculture: macro proof of ether flows

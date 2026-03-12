@@ -244,15 +244,7 @@ MIZUNO_R20_DATA = [
     {'reactor': 'R20', 'input_W': 300,  'output_W': 2250, 'COP': 7.50, 'excess_W': 1950, 'notes': 'Room heater test'},
 ]
 
-# Heat-After-Death event (1991): 85 MJ from 100g Pd = 850 kJ/g
-MIZUNO_HEAT_AFTER_DEATH = {
-    'date': '1991-04-22',
-    'total_energy_MJ': 85,
-    'Pd_mass_g': 100,
-    'energy_density_kJg': 850,  # 27x gasoline equivalent
-    'water_evaporated_L': 37.5,
-    'duration_days': 15,
-}
+# Heat-After-Death event (1991): see detailed MIZUNO_HEAT_AFTER_DEATH below (line ~373)
 
 # Mizuno empirical formulas (from R19 data fitting)
 MIZUNO_EMPIRICAL = {

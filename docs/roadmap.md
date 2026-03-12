@@ -154,7 +154,7 @@ experiments/plant_grounding    experiments/deuterium_lenr_japan
      +---------->  models/ether_barrier_and_screening  <---------+
                               |
                               v
-                   axioms/03_from_ether_to_cold_star
+                   axioms/05_from_ether_to_cold_star
                               |
                               v
                    computing/cold_star/01_physics_foundation
