@@ -69,7 +69,6 @@ class LENRClassifier:
             'objective': 'binary:logistic',
             'eval_metric': 'auc',
             'random_state': random_state,
-            'use_label_encoder': False,
             'tree_method': 'hist',
         }
         if scale_pos_weight is not None:

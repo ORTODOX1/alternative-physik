@@ -55,7 +55,7 @@ class ExcessHeatNet(nn.Module):
             prev_dim = h_dim
 
         layers.append(nn.Linear(prev_dim, 1))
-        layers.append(nn.ReLU())  # excess heat >= 0
+        layers.append(nn.Softplus())  # smooth non-negative (better gradients than ReLU)
 
         self.net = nn.Sequential(*layers)
 
@@ -133,7 +133,8 @@ class LENRRegressor:
 
         self.model: Optional[ExcessHeatNet] = None
         self.scaler_X = StandardScaler()
-        self.scaler_y = StandardScaler()
+        self.y_mean: float = 0.0
+        self.y_std: float = 1.0
         self.feature_names: list[str] = []
         self.is_fitted = False
 
@@ -151,9 +152,13 @@ class LENRRegressor:
         X = df[feature_cols].values.astype(np.float32)
         y = df[target_col].values.astype(np.float32)
 
-        # Scale
+        # Scale features
         X_scaled = self.scaler_X.fit_transform(X)
-        y_scaled = self.scaler_y.fit_transform(y.reshape(-1, 1)).ravel()
+        # Log1p transform for skewed target (most values near 0)
+        y_log = np.log1p(y)
+        self.y_mean = y_log.mean()
+        self.y_std = y_log.std() + 1e-8
+        y_scaled = (y_log - self.y_mean) / self.y_std
 
         # Split
         X_train, X_test, y_train, y_test = train_test_split(
@@ -250,8 +255,11 @@ class LENRRegressor:
         with torch.no_grad():
             y_pred_scaled = self.model(X_test_t).cpu().numpy()
 
-        y_pred = self.scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
-        y_true = self.scaler_y.inverse_transform(y_test.reshape(-1, 1)).ravel()
+        # Inverse log1p transform
+        y_pred_log = y_pred_scaled * self.y_std + self.y_mean
+        y_pred = np.expm1(y_pred_log)
+        y_true_log = y_test * self.y_std + self.y_mean
+        y_true = np.expm1(y_true_log)
 
         # Clip negative predictions
         y_pred = np.maximum(y_pred, 0)
@@ -298,7 +306,8 @@ class LENRRegressor:
         with torch.no_grad():
             y_scaled = self.model(X_t).cpu().numpy()
 
-        y = self.scaler_y.inverse_transform(y_scaled.reshape(-1, 1)).ravel()
+        y_log = y_scaled * self.y_std + self.y_mean
+        y = np.expm1(y_log)
         return np.maximum(y, 0)
 
     def save(self, path: str):
@@ -309,7 +318,8 @@ class LENRRegressor:
             'input_dim': len(self.feature_names),
             'feature_names': self.feature_names,
             'scaler_X': self.scaler_X,
-            'scaler_y': self.scaler_y,
+            'y_mean': self.y_mean,
+            'y_std': self.y_std,
         }, path)
 
     @classmethod
@@ -319,7 +329,8 @@ class LENRRegressor:
         obj = cls(hidden_dims=data['hidden_dims'], device=device)
         obj.feature_names = data['feature_names']
         obj.scaler_X = data['scaler_X']
-        obj.scaler_y = data['scaler_y']
+        obj.y_mean = data['y_mean']
+        obj.y_std = data['y_std']
         obj.model = ExcessHeatNet(data['input_dim'], data['hidden_dims']).to(obj.device)
         obj.model.load_state_dict(data['model_state'])
         obj.model.eval()

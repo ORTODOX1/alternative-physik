@@ -90,7 +90,10 @@ class LENRDataGenerator:
             reaction_probability = self._estimate_reaction_prob(
                 material, E_cm_keV, T_K, D_loading, Us_noisy, pressure_Pa,
             )
-            is_reaction = int(self.rng.random() < reaction_probability)
+            # Deterministic threshold with small noise (not random coin flip!)
+            # This makes labels a learnable function of features
+            threshold_noise = self.rng.normal(0, 0.05)
+            is_reaction = int(reaction_probability > (0.30 + threshold_noise))
 
             # Excess heat estimation (for regression)
             excess_heat_W = self._estimate_excess_heat(
