@@ -497,8 +497,8 @@ CHEREPANOV_CONSTANTS = {
     'RHO_GAMMA_VACUUM': 1.0e-18,
     # Base medium resistance (vacuum analog of Coulomb barrier) [dimensionless]
     'R_MEDIUM_BASE': 1000.0,
-    # Magnetic flux quantum B[kg/s]
-    'B_QUANTUM': 1e-15,
+    # Magnetic flux quantum B[kg/s] — SI: Φ₀ = h/(2e) = 2.067833848×10⁻¹⁵ Wb
+    'B_QUANTUM': 2.067833848e-15,
     # Reaction threshold parameters (Weibull-like: P = 1 - exp(-k*(x-1)^n))
     'REACTION_THRESHOLD_K': 3.0,
     'REACTION_THRESHOLD_N': 2.0,

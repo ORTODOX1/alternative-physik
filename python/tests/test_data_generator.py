@@ -70,8 +70,87 @@ class TestDataGeneratorV2:
         try:
             df = data_generator.generate_exfor_data()
             assert isinstance(df, pd.DataFrame)
-        except Exception:
-            pytest.skip("EXFOR data unavailable")
+        except Exception as e:
+            pytest.skip(f"EXFOR data unavailable: {e}")
+
+
+class TestMaterialNormalization:
+    """Test _normalize_material() helper — prevents .replace('O','') bug."""
+
+    def test_simple_elements(self, data_generator):
+        """Pure element names stay unchanged."""
+        for elem in ('Pd', 'Ni', 'Fe', 'Ti', 'Au', 'Cu', 'W', 'Al'):
+            assert data_generator._normalize_material(elem) == elem
+
+    def test_co_not_stripped(self, data_generator):
+        """Co must NOT become 'C' (the old .replace('O','') bug)."""
+        assert data_generator._normalize_material('Co') == 'Co'
+
+    def test_mo_not_stripped(self, data_generator):
+        """Mo must NOT become 'M' (the old .replace('O','') bug)."""
+        assert data_generator._normalize_material('Mo') == 'Mo'
+
+    def test_pdo_oxide(self, data_generator):
+        """PdO → Pd (oxide stripping)."""
+        assert data_generator._normalize_material('PdO') == 'Pd'
+
+    def test_beo_oxide(self, data_generator):
+        """BeO → Be (oxide stripping)."""
+        assert data_generator._normalize_material('BeO') == 'Be'
+
+    def test_suffix_raiola(self, data_generator):
+        """Experiment suffix stripped correctly."""
+        assert data_generator._normalize_material('Pd_Raiola') == 'Pd'
+        assert data_generator._normalize_material('Fe_Huke') == 'Fe'
+        assert data_generator._normalize_material('Ti_Kasagi') == 'Ti'
+
+    def test_nano_prefix(self, data_generator):
+        """nano_ prefix stripped correctly."""
+        assert data_generator._normalize_material('nano_Pd') == 'Pd'
+
+    def test_compound_alloys(self, data_generator):
+        """Compound alloy names resolve to primary element."""
+        assert data_generator._normalize_material('NiCu') == 'Ni'
+        assert data_generator._normalize_material('NiPd') == 'Ni'
+        assert data_generator._normalize_material('PdNi') == 'Pd'
+
+    def test_special_names(self, data_generator):
+        """SUS304 → Fe, Constantan → Cu."""
+        assert data_generator._normalize_material('SUS304') == 'Fe'
+        assert data_generator._normalize_material('Constantan') == 'Cu'
+
+
+class TestCherepanovFeaturesFunc:
+    """Test cherepanov_features() helper function."""
+
+    def test_material_fills_chi_m(self, cherepanov_engine):
+        """Passing material fills magnetic_susceptibility_abs."""
+        from cherepanov_engine import cherepanov_features
+        cr = cherepanov_engine.calculate('Pd', 2.5, 300, 0.5)
+        feats = cherepanov_features(cr, material='Pd')
+        assert feats['magnetic_susceptibility_abs'] > 0, \
+            "chi_m_abs should be > 0 for Pd"
+
+    def test_no_material_zero_chi(self, cherepanov_engine):
+        """Without material, chi_m_abs defaults to 0."""
+        from cherepanov_engine import cherepanov_features
+        cr = cherepanov_engine.calculate('Pd', 2.5, 300, 0.5)
+        feats = cherepanov_features(cr)
+        assert feats['magnetic_susceptibility_abs'] == 0.0
+
+    def test_all_8_features_present(self, cherepanov_engine):
+        """All 8 Cherepanov features are in the dict."""
+        from cherepanov_engine import cherepanov_features
+        cr = cherepanov_engine.calculate('Ni', 2.5, 300, 0.1)
+        feats = cherepanov_features(cr, material='Ni')
+        expected_keys = [
+            'magnetic_susceptibility_abs', 'photon_mass_density',
+            'photon_mass_density_critical', 'medium_resistance',
+            'lattice_focusing_factor', 'defect_concentration',
+            'magnetic_flux_B_kg_s', 'photon_phonon_coupling',
+        ]
+        for k in expected_keys:
+            assert k in feats, f"Missing key: {k}"
 
 
 class TestFeatureColumns:

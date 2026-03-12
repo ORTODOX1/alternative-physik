@@ -4,10 +4,13 @@ Binary classification: will a nuclear reaction occur under given conditions?
 Includes SHAP analysis for feature importance.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 from typing import Optional
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 try:
     import xgboost as xgb
@@ -153,8 +156,8 @@ class LENRClassifier:
                 sv = explainer.shap_values(X_test)
                 shap_values = sv
                 shap_expected = float(explainer.expected_value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("SHAP analysis failed: %s", e)
 
         return ClassifierResult(
             accuracy=acc,

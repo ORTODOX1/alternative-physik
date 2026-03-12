@@ -558,10 +558,24 @@ class CherepanovEngine:
 # HELPER: get ML features from CherepanovResult
 # =============================================================================
 
-def cherepanov_features(cr: CherepanovResult) -> dict:
-    """Extract 8 Cherepanov features for V3 ML pipeline."""
+def cherepanov_features(cr: CherepanovResult, material: Optional[str] = None) -> dict:
+    """Extract 8 Cherepanov features for V3 ML pipeline.
+
+    Parameters
+    ----------
+    cr : CherepanovResult
+        Result from CherepanovEngine.calculate()
+    material : str, optional
+        Material name to look up magnetic susceptibility.
+        If None, caller must fill 'magnetic_susceptibility_abs' manually.
+    """
+    chi_m_abs = 0.0
+    if material is not None:
+        mag = MATERIAL_MAGNETIC.get(material, {'chi_m': 1e-6})
+        chi_m_abs = abs(mag['chi_m'])
+
     return {
-        'magnetic_susceptibility_abs': 0.0,  # filled by caller
+        'magnetic_susceptibility_abs': chi_m_abs,
         'photon_mass_density': cr.photon_mass_density,
         'photon_mass_density_critical': cr.photon_mass_density_critical,
         'medium_resistance': cr.medium_resistance,

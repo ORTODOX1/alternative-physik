@@ -3,10 +3,13 @@ Synthetic data generator for LENR ML training.
 Generates labeled datasets from the physics engine across parameter space.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 from typing import Optional
 import sys, os
+
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -23,6 +26,17 @@ from lenr_constants import (
 
 # Materials available for simulation
 SIMULATION_MATERIALS = ['Pd', 'Ni', 'Fe', 'Ti', 'Au', 'Pt', 'PdO']
+
+# Oxide → base element mapping (safe alternative to .replace('O', ''))
+_OXIDE_TO_BASE = {'PdO': 'Pd', 'BeO': 'Be', 'TiO2': 'Ti', 'ZrO2': 'Zr'}
+
+
+def _strip_oxide(material: str) -> str:
+    """Get base element from material, safely handling oxides.
+
+    Unlike .replace('O', ''), this does NOT corrupt 'Co' → 'C' or 'Mo' → 'M'.
+    """
+    return _OXIDE_TO_BASE.get(material, material)
 
 
 class LENRDataGenerator:
@@ -52,8 +66,8 @@ class LENRDataGenerator:
             pressure_Pa = float(10 ** self.rng.uniform(4, 6))  # 10kPa to 1MPa
 
             # Material properties
-            lat = LATTICE.get(material.replace('O', ''), LATTICE.get('Pd'))
-            diff_data = DIFFUSION.get(material.replace('O', ''))
+            lat = LATTICE.get(_strip_oxide(material), LATTICE.get('Pd'))
+            diff_data = DIFFUSION.get(_strip_oxide(material))
             scr = SCREENING_EXPERIMENTAL.get(material, {'Us_eV': 50, 'error_eV': 10})
 
             lattice_a = lat['a_A'] if lat else 3.89
@@ -70,8 +84,9 @@ class LENRDataGenerator:
             D_coeff = 0.0
             if diff_data:
                 try:
-                    D_coeff = diffusion_coefficient(material.replace('O', ''), T_K)
-                except Exception:
+                    D_coeff = diffusion_coefficient(_strip_oxide(material), T_K)
+                except Exception as e:
+                    logger.debug("Diffusion calc failed for %s at %g K: %s", material, T_K, e)
                     D_coeff = 1e-10
 
             # Enhancement
@@ -233,7 +248,8 @@ class LENRDataGenerator:
             # Diffusion
             try:
                 D_coeff = diffusion_coefficient('Ni', T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for Ni at %g K: %s", T_K, e)
                 D_coeff = 1e-10
 
             # Enhancement & cross-section
@@ -310,7 +326,8 @@ class LENRDataGenerator:
             # Diffusion (use Fe as proxy for SUS304)
             try:
                 D_coeff = diffusion_coefficient('Fe', T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for Fe at %g K: %s", T_K, e)
                 D_coeff = 1e-10
 
             enh = enhancement_factor(E_cm_keV, Us_Fe)

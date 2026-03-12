@@ -24,9 +24,12 @@ V3 also supports EXFOR data integration (~2000+ experimental D-D points).
 
 import numpy as np
 import pandas as pd
+import logging
 from typing import Optional
 import sys
 import os
+
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -88,6 +91,57 @@ class LENRDataGeneratorV2:
         self.exfor_loader = EXFORLoader()
 
     # =========================================================================
+    # MATERIAL NAME NORMALIZATION
+    # =========================================================================
+    _KNOWN_OXIDES = {'PdO': 'Pd', 'BeO': 'Be', 'TiO2': 'Ti', 'ZrO2': 'Zr',
+                     'CeO2': 'Ce', 'Be_BeO': 'Be'}
+    _COMPOUND_MAP = {'NiCu': 'Ni', 'NiPd': 'Ni', 'PdNi': 'Pd'}
+    _KNOWN_ELEMENTS = frozenset([
+        'Pd', 'Ni', 'Fe', 'Ti', 'Au', 'Pt', 'W', 'Cu', 'Co', 'Zr', 'Ta',
+        'Al', 'Nb', 'V', 'Cr', 'Mn', 'Ag', 'Sn', 'In', 'Be', 'Er', 'Mo',
+        'Mg', 'Zn', 'Y', 'Ru', 'Rh', 'Cd', 'Hf', 'Re', 'Ir', 'Pb', 'B',
+    ])
+
+    def _normalize_material(self, material: str) -> str:
+        """Get base element name from material string.
+
+        Handles:
+          - Experiment suffixes: 'Pd_Raiola' → 'Pd'
+          - Oxide compounds:    'PdO' → 'Pd' (but 'Co' stays 'Co')
+          - Nano prefix:        'nano_Pd' → 'Pd'
+          - Compound alloys:    'NiCu' → 'Ni'
+          - Special materials:  'SUS304' → 'Fe', 'Constantan' → 'Cu'
+        """
+        base = material
+        # 1. Strip experiment group suffixes (longest first, endswith only)
+        for suffix in ('_Raiola', '_Huke', '_Kasagi', '_Czerski', '_NASA'):
+            if base.endswith(suffix):
+                base = base[:-len(suffix)]
+                break
+        # 2. Nano prefix
+        if base.startswith('nano_'):
+            base = base[5:]
+        # 3. Compound/alloy names
+        if base in self._COMPOUND_MAP:
+            return self._COMPOUND_MAP[base]
+        if base.startswith('PdNi_'):
+            return 'Pd'
+        # 4. Oxides (explicit mapping, NOT .replace('O',''))
+        if base in self._KNOWN_OXIDES:
+            return self._KNOWN_OXIDES[base]
+        # 5. Steel/alloy names
+        if base == 'SUS304':
+            return 'Fe'
+        if base == 'Constantan':
+            return 'Cu'
+        # 6. Generic underscore suffix (e.g. 'Pd_something')
+        if '_' in base:
+            candidate = base.split('_')[0]
+            if candidate in self._KNOWN_ELEMENTS:
+                return candidate
+        return base
+
+    # =========================================================================
     # MATERIAL FEATURE EXTRACTION
     # =========================================================================
     def _get_material_features(self, material: str) -> dict:
@@ -116,8 +170,8 @@ class LENRDataGeneratorV2:
         scr = SCREENING_COMPLETE.get(material)
         if scr:
             return scr['Us_eV']
-        # Fallback: use base material
-        base = material.replace('O', '').split('_')[0]
+        # Fallback: use base element name
+        base = self._normalize_material(material)
         scr = SCREENING_COMPLETE.get(base)
         if scr:
             return scr['Us_eV']
@@ -183,18 +237,8 @@ class LENRDataGeneratorV2:
         # Resolve defect concentration from surface state
         defect_conc = SURFACE_TO_DEFECTS.get(surface, 0.05)
 
-        # Base material (strip suffixes for engine lookup)
-        base_mat = material
-        for suffix in ('_Raiola', '_Huke', '_Kasagi', '_Czerski'):
-            base_mat = base_mat.replace(suffix, '')
-        if base_mat.startswith('nano_'):
-            base_mat = base_mat[5:]
-        if base_mat.startswith('PdNi_'):
-            base_mat = 'Pd'
-        if base_mat == 'NiCu':
-            base_mat = 'Ni'
-        if base_mat == 'NiPd':
-            base_mat = 'Ni'
+        # Base element for engine lookup
+        base_mat = self._normalize_material(material)
 
         try:
             cr = self.cherepanov.calculate(
@@ -202,18 +246,15 @@ class LENRDataGeneratorV2:
                 B_field_T=B_field_T,
                 defect_concentration=defect_conc,
             )
-        except Exception:
+        except Exception as e:
+            logger.debug("Cherepanov calc failed for %s, falling back to Pd: %s", base_mat, e)
             cr = self.cherepanov.calculate(
                 'Pd', E_cm_keV, T_K, D_loading,
                 B_field_T=B_field_T,
                 defect_concentration=defect_conc,
             )
 
-        feats = cherepanov_features(cr)
-
-        # Fill magnetic_susceptibility_abs from material database
-        mag = MATERIAL_MAGNETIC.get(base_mat, {'chi_m': 1e-6})
-        feats['magnetic_susceptibility_abs'] = abs(mag['chi_m'])
+        feats = cherepanov_features(cr, material=base_mat)
 
         return feats
 
@@ -234,12 +275,10 @@ class LENRDataGeneratorV2:
             'log_cross_section': sigma_log,
         }
 
-        # Use base material for physics engine (strip suffixes)
-        base_mat = material
-        for suffix in ('_R', '_H', 'O', '_Raiola', '_Huke'):
-            base_mat = base_mat.replace(suffix, '')
-        if base_mat not in ('Pd', 'Ni', 'Fe', 'Ti', 'Au', 'Pt', 'W', 'Cu'):
-            base_mat = 'Pd'  # fallback
+        # Use base element for physics engine
+        base_mat = self._normalize_material(material)
+        if base_mat not in self._KNOWN_ELEMENTS:
+            base_mat = 'Pd'  # fallback for unknown materials
 
         # Map engine key → short column name (consistent with V1 and feature spec)
         _col_name = {
@@ -251,7 +290,9 @@ class LENRDataGeneratorV2:
         for mode_name, engine in self.engines.items():
             try:
                 br = engine.calculate_barrier(base_mat, E_cm_keV, T_K, D_loading)
-            except Exception:
+            except Exception as e:
+                logger.debug("Barrier calc failed for %s (%s), falling back to Pd: %s",
+                             base_mat, mode_name, e)
                 br = engine.calculate_barrier('Pd', E_cm_keV, T_K, D_loading)
 
             col = _col_name.get(mode_name, mode_name)
@@ -467,7 +508,8 @@ class LENRDataGeneratorV2:
             # Diffusion
             try:
                 D_coeff = self._calc_diffusion(material, T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for %s at %g K: %s", material, T_K, e)
                 D_coeff = 1e-10
             _, Ea_diff = self._get_diffusion_params(material)
 
@@ -604,7 +646,8 @@ class LENRDataGeneratorV2:
 
             try:
                 D_coeff = self._calc_diffusion(base_mat, T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for %s at %g K: %s", base_mat, T_K, e)
                 D_coeff = 1e-10
             _, Ea_diff = self._get_diffusion_params(base_mat)
             debye_K = mat_props['debye_temperature_K']
@@ -709,7 +752,8 @@ class LENRDataGeneratorV2:
             barrier_feats = self._calc_barrier_features('Ni', E_cm_keV, T_K, D_loading)
             try:
                 D_coeff = self._calc_diffusion('Ni', T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for Ni at %g K: %s", T_K, e)
                 D_coeff = 1e-10
 
             COP = m['COP'] or 1.0
@@ -797,7 +841,8 @@ class LENRDataGeneratorV2:
             barrier_feats = self._calc_barrier_features('Fe', E_cm_keV, T_K, 0.001)
             try:
                 D_coeff = self._calc_diffusion('Fe', T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for Fe at %g K: %s", T_K, e)
                 D_coeff = 1e-10
 
             # V3: Cherepanov (SUS304 ~ Fe-based, mesh_400_buffed surface)
@@ -930,7 +975,8 @@ class LENRDataGeneratorV2:
 
             try:
                 D_coeff = self._calc_diffusion(material, T_K)
-            except Exception:
+            except Exception as e:
+                logger.debug("Diffusion calc failed for %s at %g K: %s", material, T_K, e)
                 D_coeff = 1e-10
             _, Ea_diff = self._get_diffusion_params(material)
             debye_K = mat_props['debye_temperature_K']
@@ -1149,7 +1195,8 @@ class LENRDataGeneratorV2:
                 components,
                 defect_concentration=defect_conc,
             )
-        except Exception:
+        except Exception as e:
+            logger.debug("Alloy LENR prediction failed for %s: %s", components, e)
             return None
 
         # Use dominant element for material features
@@ -1186,7 +1233,8 @@ class LENRDataGeneratorV2:
 
         try:
             D_coeff = self._calc_diffusion(dominant, T_K)
-        except Exception:
+        except Exception as e:
+            logger.debug("Diffusion calc failed for %s at %g K: %s", dominant, T_K, e)
             D_coeff = 1e-10
         _, Ea_diff = self._get_diffusion_params(dominant)
         debye_K = alloy_props.debye_K
@@ -1280,7 +1328,8 @@ class LENRDataGeneratorV2:
                 oxide_fraction=oxide_frac,
                 defect_concentration=defect_conc,
             )
-        except Exception:
+        except Exception as e:
+            logger.debug("Composite LENR prediction failed for %s/%s: %s", metal, oxide, e)
             return None
 
         # Reuse alloy prediction logic with single-element composition

@@ -22,7 +22,13 @@ Uses:
 import numpy as np
 import pandas as pd
 import logging
+import sys
+import os
 from typing import Optional
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from cherepanov_engine import STRUCTURE_FACTORS, MAGNETIC_CLASS, DEFECT_CONCENTRATION as DEFECT_CONCENTRATION_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -76,21 +82,9 @@ MATERIAL_PROPERTIES = {
     'BeO':        {'Z': 4,   'e_density': 0.0,    'theta_D': 1280,'a': 2.698,  'chi_m': -1.0e-5,  'fermi_E': 0,     'mag_class': 'diamagnetic',  'structure': 'HCP'},
 }
 
-# Defect state → concentration mapping
-DEFECT_MAP = {
-    'cold_rolled': 0.50,
-    'nano': 0.30,
-    'irradiated': 0.25,
-    'sputtered': 0.20,
-    'oxidized': 0.15,
-    'mesh': 0.10,
-    'polycrystal': 0.05,
-    'annealed': 0.005,
-    'single_crystal': 0.001,
-    'insulator': 0.001,
-    'semiconductor': 0.003,
-    'N/A': 0.0,
-}
+# Defect state → concentration mapping (imported from cherepanov_engine, + extras)
+DEFECT_MAP = dict(DEFECT_CONCENTRATION_MAP)  # base from cherepanov_engine
+DEFECT_MAP['N/A'] = 0.0  # additional entry for barrier falsification
 
 
 class BarrierFalsification:
@@ -98,8 +92,6 @@ class BarrierFalsification:
 
     def load_all_screening_data(self) -> pd.DataFrame:
         """Load complete screening energy compilation with material properties."""
-        import sys, os
-        sys.path.insert(0, os.path.dirname(__file__))
         from exfor_loader import SCREENING_COMPILATION
 
         rows = []
@@ -109,17 +101,14 @@ class BarrierFalsification:
             # Defect concentration
             defects = DEFECT_MAP.get(defect_state, 0.05)
 
-            # Lattice focusing (Cherepanov)
-            structure_f = {'FCC': 1.0, 'BCC': 0.7, 'HCP': 0.5}.get(
+            # Lattice focusing (Cherepanov) — use canonical values from cherepanov_engine
+            structure_f = STRUCTURE_FACTORS.get(
                 props.get('structure', 'FCC'), 0.5)
 
-            # Magnetic class factor
-            mag_factor = {
-                'ferromagnetic': 10.0,
-                'paramagnetic': 2.0,
-                'diamagnetic': 0.5,
-                'none': 0.0,
-            }.get(props.get('mag_class', 'diamagnetic'), 0.5)
+            # Magnetic class factor — use canonical values from cherepanov_engine
+            mag_class_name = props.get('mag_class', 'diamagnetic')
+            mag_class_info = MAGNETIC_CLASS.get(mag_class_name)
+            mag_factor = mag_class_info['factor'] if mag_class_info else 0.0
 
             # Cherepanov "focusing" = structure × magnetic × lattice_ratio
             a = props.get('a', 3.5)

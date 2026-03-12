@@ -36,6 +36,8 @@ class BarrierResult:
 class PhysicsEngine:
     """Core physics engine with 3 calculation modes."""
 
+    _cherepanov_engine = None  # class-level cache
+
     def __init__(self, mode: PhysicsMode = 'maxwell'):
         self.mode = mode
 
@@ -133,10 +135,12 @@ class PhysicsEngine:
         """Cherepanov: no charge, photon mass, magnetic flux interactions.
 
         Delegates to CherepanovEngine for real physics calculation.
+        Uses class-level cached engine instance to avoid re-creation overhead.
         """
-        from cherepanov_engine import CherepanovEngine
-        engine = CherepanovEngine()
-        return engine.calculate_barrier(
+        if PhysicsEngine._cherepanov_engine is None:
+            from cherepanov_engine import CherepanovEngine
+            PhysicsEngine._cherepanov_engine = CherepanovEngine()
+        return PhysicsEngine._cherepanov_engine.calculate_barrier(
             material, E_cm_keV, T_K, D_loading,
             defect_concentration=defect_concentration,
             B_field_T=B_field_T,

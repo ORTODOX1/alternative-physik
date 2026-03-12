@@ -817,7 +817,8 @@ class EXFORLoader:
             # Predicted cross-section from Bosch-Hale (bare nucleus)
             try:
                 xs_predicted = cross_section_DD(E) * 1000  # barns to mb
-            except Exception:
+            except Exception as e:
+                logger.debug("Bosch-Hale cross-section failed at %.3f keV: %s", E, e)
                 xs_predicted = 1e-50
 
             # S-factor
