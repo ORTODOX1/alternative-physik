@@ -13,3 +13,22 @@ __pycache__/
 Thumbs.db
 *.log
 .turbo
+
+# Python ML artifacts
+python/saved_models/
+python/saved_data/
+*.joblib
+*.pt
+*.pth
+*.h5
+*.onnx
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
