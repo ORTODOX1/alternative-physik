@@ -3,10 +3,15 @@ DNN regressor for LENR excess heat prediction.
 Predicts continuous excess heat output (W) with physics-informed loss.
 """
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    import torch
 
 try:
     import torch
@@ -35,10 +40,21 @@ class RegressorResult:
     feature_importance: dict[str, float]
 
 
-class ExcessHeatNet(nn.Module):
+if not HAS_TORCH:
+    # Stub base class when PyTorch is not installed
+    class _ModuleStub:
+        pass
+    _nn_Module = _ModuleStub
+else:
+    _nn_Module = nn.Module
+
+
+class ExcessHeatNet(_nn_Module):
     """Neural network for excess heat prediction."""
 
     def __init__(self, input_dim: int, hidden_dims: list[int] = None):
+        if not HAS_TORCH:
+            raise ImportError("PyTorch is required for DNN regressor: pip install torch")
         super().__init__()
         if hidden_dims is None:
             hidden_dims = [128, 64, 32]
@@ -63,7 +79,7 @@ class ExcessHeatNet(nn.Module):
         return self.net(x).squeeze(-1)
 
 
-class PhysicsLoss(nn.Module):
+class PhysicsLoss(_nn_Module):
     """Physics-informed loss: MSE + constraint penalties.
 
     Constraints:
@@ -73,6 +89,8 @@ class PhysicsLoss(nn.Module):
     """
 
     def __init__(self, lambda_loading: float = 0.1, lambda_physics: float = 0.05):
+        if not HAS_TORCH:
+            raise ImportError("PyTorch is required: pip install torch")
         super().__init__()
         self.mse = nn.MSELoss()
         self.lambda_loading = lambda_loading
