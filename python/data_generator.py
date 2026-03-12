@@ -15,6 +15,7 @@ from physics_engine import PhysicsEngine, PhysicsMode
 from lenr_constants import (
     SCREENING_EXPERIMENTAL, LATTICE, DIFFUSION, LOADING,
     EXCESS_HEAT_DATA, EQPET_SCREENING, BARRIER_FACTORS,
+    MIZUNO_R19_DATA, MIZUNO_EMPIRICAL,
     diffusion_coefficient, enhancement_factor, cross_section_DD,
 )
 
@@ -205,6 +206,89 @@ class LENRDataGenerator:
 
         return base_W * loading_factor * screening_factor * mf * reaction_prob * 10
 
+    def generate_mizuno_dataframe(self) -> pd.DataFrame:
+        """Convert Mizuno R19 real data (55 points) to ML-ready DataFrame.
+
+        Fills in physics-engine features for each Mizuno measurement.
+        Material = Ni (mesh) + Pd (coating) → use Ni screening/lattice.
+        """
+        records = []
+        # Mizuno uses Ni mesh with Pd coating, D₂ gas loading
+        Us_Ni = SCREENING_EXPERIMENTAL.get('Ni', {}).get('Us_eV', 420)
+        lat = LATTICE.get('Ni', LATTICE['Pd'])
+
+        for m in MIZUNO_R19_DATA:
+            if m['input_W'] == 0:
+                continue  # skip heat-after-death points (no input)
+
+            T_K = m['temp_C'] + 273.15
+            D_loading = m['D_Ni']  # D/Ni ratio (very low, ~0.001-0.017)
+            pressure_Pa = m['pressure_Pa']
+
+            # Use low energy (~thermal) for Mizuno gas loading
+            # Thermal energy at T_K in keV
+            E_cm_keV = max(8.617e-5 * T_K / 1000.0, 0.01)  # kB*T in keV
+
+            # Diffusion
+            try:
+                D_coeff = diffusion_coefficient('Ni', T_K)
+            except Exception:
+                D_coeff = 1e-10
+
+            # Enhancement & cross-section
+            enh = enhancement_factor(E_cm_keV, Us_Ni)
+            sigma_bare = cross_section_DD(E_cm_keV)
+            sigma_log = np.log10(max(sigma_bare, 1e-50))
+
+            # Barrier calculations
+            barrier_results = {}
+            for mode_name, engine in self.engines.items():
+                br = engine.calculate_barrier('Ni', E_cm_keV, T_K, D_loading)
+                barrier_results[mode_name] = br
+
+            record = {
+                'material': 'NiPd',
+                'material_encoded': hash('NiPd') % 100,
+                'structure': lat['structure'],
+                'lattice_constant_A': lat['a_A'],
+                'debye_temperature_K': lat['debye_K'],
+                'electron_density_A3': lat.get('e_density_A3', 0.16),
+                'screening_energy_eV': Us_Ni,
+                'beam_energy_keV': E_cm_keV,
+                'temperature_K': T_K,
+                'deuterium_loading': D_loading,
+                'pressure_Pa': pressure_Pa,
+                'diffusion_coefficient': D_coeff,
+                'enhancement_factor': enh,
+                'log_cross_section': sigma_log,
+                'barrier_reduction_maxwell': barrier_results['maxwell'].effective_barrier_keV / max(barrier_results['maxwell'].barrier_keV, 1),
+                'barrier_reduction_coulomb': barrier_results['coulomb_original'].effective_barrier_keV / max(barrier_results['coulomb_original'].barrier_keV, 1),
+                'barrier_reduction_cherepanov': barrier_results['cherepanov'].effective_barrier_keV / max(barrier_results['cherepanov'].barrier_keV, 1),
+                'penetration_maxwell': barrier_results['maxwell'].penetration_probability,
+                'penetration_coulomb': barrier_results['coulomb_original'].penetration_probability,
+                'penetration_cherepanov': barrier_results['cherepanov'].penetration_probability,
+                'rate_maxwell': barrier_results['maxwell'].reaction_rate_relative,
+                'rate_coulomb': barrier_results['coulomb_original'].reaction_rate_relative,
+                'rate_cherepanov': barrier_results['cherepanov'].reaction_rate_relative,
+                'log_rate_maxwell': np.log10(max(barrier_results['maxwell'].reaction_rate_relative, 1e-300)),
+                'log_rate_coulomb': np.log10(max(barrier_results['coulomb_original'].reaction_rate_relative, 1e-300)),
+                'log_rate_cherepanov': np.log10(max(barrier_results['cherepanov'].reaction_rate_relative, 1e-300)),
+                'above_loading_threshold': 0,  # Mizuno D/Ni << 0.84 but still works!
+                'above_storms_threshold': 0,
+                # Labels
+                'reaction_occurred': 1,  # all Mizuno tests show excess heat
+                'reaction_probability': 1.0,
+                'excess_heat_W': m['excess_W'],
+                # Mizuno-specific
+                'input_power_W': m['input_W'],
+                'COP': m['COP'],
+                'heat_per_g_Ni': m['heat_per_g'],
+                'data_source': 'mizuno_r19',
+            }
+            records.append(record)
+
+        return pd.DataFrame(records)
+
     def generate_experimental_dataframe(self) -> pd.DataFrame:
         """Convert real experimental data to DataFrame."""
         records = []
@@ -233,8 +317,13 @@ class LENRDataGenerator:
         self,
         n_synthetic: int = 5000,
         noise_level: float = 0.05,
+        include_mizuno: bool = True,
     ) -> pd.DataFrame:
-        """Generate combined real + synthetic dataset."""
+        """Generate combined real + synthetic dataset.
+
+        Args:
+            include_mizuno: Include 53 real Mizuno R19 data points (recommended).
+        """
         synthetic = self.generate_parameter_sweep(n_synthetic, noise_level)
         experimental = self.generate_experimental_dataframe()
 
@@ -242,10 +331,19 @@ class LENRDataGenerator:
         synthetic['data_source'] = 'synthetic'
         experimental['data_source'] = 'experimental'
 
-        # Find common columns
-        common_cols = list(set(synthetic.columns) & set(experimental.columns))
-        combined = pd.concat([synthetic[common_cols], experimental[common_cols]], ignore_index=True)
+        frames = [synthetic, experimental]
 
+        if include_mizuno:
+            mizuno = self.generate_mizuno_dataframe()
+            frames.append(mizuno)
+
+        # Find common columns across all frames
+        common_cols = set(frames[0].columns)
+        for f in frames[1:]:
+            common_cols &= set(f.columns)
+        common_cols = list(common_cols)
+
+        combined = pd.concat([f[common_cols] for f in frames], ignore_index=True)
         return combined
 
 

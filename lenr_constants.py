@@ -169,6 +169,144 @@ EXCESS_HEAT_DATA = [
 ]
 
 # =============================================================================
+# MIZUNO R19 REACTOR DATA (55 tests, Feb-May 2019)
+# Source: ICCF-22 "Increased Excess Heat from Palladium Deposited on Nickel"
+# Reactor: Ni-mesh 54g (180 mesh) + Pd coating 45-60mg, D₂ gas
+# Calorimeter: Air flow, accuracy ±5W
+# =============================================================================
+MIZUNO_R19_DATA = [
+    # (date, pressure_Pa, input_W, output_input_ratio, excess_W, reactor_temp_C, heat_per_g_Ni, D_Ni_ratio)
+    {'date': '2/20',  'pressure_Pa': 5412, 'input_W': 100.0, 'COP': 1.39, 'excess_W': 38.63, 'temp_C': 238.9, 'heat_per_g': 0.7154, 'D_Ni': 0.000051},
+    {'date': '2/21',  'pressure_Pa': 6320, 'input_W': 197.4, 'COP': 1.40, 'excess_W': 78.31, 'temp_C': 386.0, 'heat_per_g': 1.4501, 'D_Ni': 0.000115},
+    {'date': '2/26',  'pressure_Pa': 5949, 'input_W': 50.1,  'COP': 1.21, 'excess_W': 10.42, 'temp_C': 145.0, 'heat_per_g': 0.1929, 'D_Ni': 0.000128},
+    {'date': '3/22',  'pressure_Pa': 5421, 'input_W': 99.3,  'COP': 1.42, 'excess_W': 41.84, 'temp_C': 234.0, 'heat_per_g': 0.7749, 'D_Ni': 0.000312},
+    {'date': '3/23',  'pressure_Pa': 600,  'input_W': 98.6,  'COP': 1.42, 'excess_W': 41.06, 'temp_C': 229.0, 'heat_per_g': 0.7604, 'D_Ni': 0.000269},
+    {'date': '3/25',  'pressure_Pa': 120,  'input_W': 98.2,  'COP': 1.40, 'excess_W': 39.64, 'temp_C': 232.0, 'heat_per_g': 0.7340, 'D_Ni': 0.000250},
+    {'date': '3/26',  'pressure_Pa': 78,   'input_W': 98.0,  'COP': 1.43, 'excess_W': 42.30, 'temp_C': 232.7, 'heat_per_g': 0.7834, 'D_Ni': 0.000232},
+    {'date': '3/27',  'pressure_Pa': 46,   'input_W': 98.0,  'COP': 1.41, 'excess_W': 40.46, 'temp_C': 232.6, 'heat_per_g': 0.7493, 'D_Ni': 0.000222},
+    {'date': '3/28',  'pressure_Pa': 35,   'input_W': 97.9,  'COP': 1.42, 'excess_W': 40.89, 'temp_C': 232.0, 'heat_per_g': 0.7573, 'D_Ni': 0.000214},
+    {'date': '3/29',  'pressure_Pa': 28,   'input_W': 97.7,  'COP': 1.40, 'excess_W': 39.20, 'temp_C': 231.5, 'heat_per_g': 0.7260, 'D_Ni': 0.000208},
+    {'date': '3/30',  'pressure_Pa': 25,   'input_W': 97.5,  'COP': 1.39, 'excess_W': 38.02, 'temp_C': 230.1, 'heat_per_g': 0.7040, 'D_Ni': 0.000201},
+    {'date': '4/1',   'pressure_Pa': 17,   'input_W': 97.4,  'COP': 1.41, 'excess_W': 40.07, 'temp_C': 231.96,'heat_per_g': 0.7419, 'D_Ni': 0.000197},
+    {'date': '4/2',   'pressure_Pa': 20,   'input_W': 97.5,  'COP': 1.40, 'excess_W': 39.43, 'temp_C': 232.36,'heat_per_g': 0.7301, 'D_Ni': 0.000193},
+    {'date': '4/3',   'pressure_Pa': 4644, 'input_W': 97.3,  'COP': 1.40, 'excess_W': 39.03, 'temp_C': 231.83,'heat_per_g': 0.7228, 'D_Ni': 0.000280},
+    {'date': '4/4',   'pressure_Pa': 4553, 'input_W': 97.2,  'COP': 1.42, 'excess_W': 40.37, 'temp_C': 233.1, 'heat_per_g': 0.7476, 'D_Ni': 0.000310},
+    {'date': '4/5',   'pressure_Pa': 4092, 'input_W': 152.3, 'COP': 1.50, 'excess_W': 76.17, 'temp_C': 320.0, 'heat_per_g': 1.4105, 'D_Ni': 0.000502},
+    {'date': '4/6',   'pressure_Pa': 1932, 'input_W': 200.9, 'COP': 1.51, 'excess_W': 102.05,'temp_C': 382.7, 'heat_per_g': 1.8898, 'D_Ni': 0.001005},
+    {'date': '4/8',   'pressure_Pa': 3751, 'input_W': 200.8, 'COP': 1.49, 'excess_W': 97.62, 'temp_C': 383.3, 'heat_per_g': 1.8078, 'D_Ni': 0.001670},
+    {'date': '4/9',   'pressure_Pa': 3670, 'input_W': 200.8, 'COP': 1.49, 'excess_W': 97.94, 'temp_C': 382.6, 'heat_per_g': 1.8137, 'D_Ni': 0.002280},
+    {'date': '4/10',  'pressure_Pa': 3268, 'input_W': 201.0, 'COP': 1.49, 'excess_W': 97.64, 'temp_C': 384.5, 'heat_per_g': 1.8081, 'D_Ni': 0.002825},
+    {'date': '4/11',  'pressure_Pa': 3199, 'input_W': 200.9, 'COP': 1.48, 'excess_W': 96.74, 'temp_C': 383.93,'heat_per_g': 1.7914, 'D_Ni': 0.003373},
+    {'date': '4/12',  'pressure_Pa': 3173, 'input_W': 200.9, 'COP': 1.48, 'excess_W': 96.04, 'temp_C': 383.1, 'heat_per_g': 1.7784, 'D_Ni': 0.003959},
+    {'date': '4/13',  'pressure_Pa': 2581, 'input_W': 200.9, 'COP': 1.48, 'excess_W': 96.22, 'temp_C': 383.4, 'heat_per_g': 1.7818, 'D_Ni': 0.004640},
+    {'date': '4/15',  'pressure_Pa': 3042, 'input_W': 200.7, 'COP': 1.51, 'excess_W': 101.67,'temp_C': 381.0, 'heat_per_g': 1.8829, 'D_Ni': 0.005211},
+    {'date': '4/16',  'pressure_Pa': 3207, 'input_W': 200.6, 'COP': 1.47, 'excess_W': 94.24, 'temp_C': 380.8, 'heat_per_g': 1.7451, 'D_Ni': 0.005758},
+    {'date': '4/17',  'pressure_Pa': 3058, 'input_W': 200.6, 'COP': 1.46, 'excess_W': 91.95, 'temp_C': 381.9, 'heat_per_g': 1.7028, 'D_Ni': 0.006624},
+    {'date': '4/18',  'pressure_Pa': 2646, 'input_W': 200.6, 'COP': 1.47, 'excess_W': 93.22, 'temp_C': 382.57,'heat_per_g': 1.7263, 'D_Ni': 0.007206},
+    {'date': '4/19',  'pressure_Pa': 2546, 'input_W': 200.6, 'COP': 1.46, 'excess_W': 91.97, 'temp_C': 380.7, 'heat_per_g': 1.7031, 'D_Ni': 0.007875},
+    {'date': '4/20',  'pressure_Pa': 2676, 'input_W': 200.5, 'COP': 1.47, 'excess_W': 93.42, 'temp_C': 378.16,'heat_per_g': 1.7300, 'D_Ni': 0.008453},
+    {'date': '4/21',  'pressure_Pa': 2903, 'input_W': 200.5, 'COP': 1.47, 'excess_W': 93.39, 'temp_C': 377.56,'heat_per_g': 1.7295, 'D_Ni': 0.008973},
+    {'date': '4/22',  'pressure_Pa': 2863, 'input_W': 200.5, 'COP': 1.45, 'excess_W': 91.09, 'temp_C': 377.4, 'heat_per_g': 1.6868, 'D_Ni': 0.009531},
+    {'date': '4/23',  'pressure_Pa': 2771, 'input_W': 200.5, 'COP': 1.47, 'excess_W': 94.49, 'temp_C': 377.0, 'heat_per_g': 1.7499, 'D_Ni': 0.010095},
+    {'date': '4/24',  'pressure_Pa': 2773, 'input_W': 200.5, 'COP': 1.47, 'excess_W': 93.44, 'temp_C': 377.0, 'heat_per_g': 1.7303, 'D_Ni': 0.010680},
+    {'date': '4/25',  'pressure_Pa': 2761, 'input_W': 200.4, 'COP': 1.46, 'excess_W': 92.74, 'temp_C': 376.0, 'heat_per_g': 1.7173, 'D_Ni': 0.011250},
+    {'date': '4/26',  'pressure_Pa': 2831, 'input_W': 200.5, 'COP': 1.47, 'excess_W': 94.42, 'temp_C': 377.0, 'heat_per_g': 1.7485, 'D_Ni': 0.011834},
+    {'date': '4/27',  'pressure_Pa': 2111, 'input_W': 200.4, 'COP': 1.46, 'excess_W': 92.17, 'temp_C': 375.5, 'heat_per_g': 1.7068, 'D_Ni': 0.012600},
+    {'date': '4/29',  'pressure_Pa': 1996, 'input_W': 200.4, 'COP': 1.46, 'excess_W': 91.15, 'temp_C': 377.8, 'heat_per_g': 1.6879, 'D_Ni': 0.013380},
+    {'date': '5/1',   'pressure_Pa': 1156, 'input_W': 200.5, 'COP': 1.47, 'excess_W': 94.23, 'temp_C': 378.3, 'heat_per_g': 1.7451, 'D_Ni': 0.013397},
+    {'date': '5/3',   'pressure_Pa': 1152, 'input_W': 200.5, 'COP': 1.45, 'excess_W': 90.48, 'temp_C': 377.0, 'heat_per_g': 1.6755, 'D_Ni': 0.013400},
+    {'date': '5/4',   'pressure_Pa': 2537, 'input_W': 200.4, 'COP': 1.44, 'excess_W': 88.44, 'temp_C': 377.6, 'heat_per_g': 1.6378, 'D_Ni': 0.014008},
+    {'date': '5/5',   'pressure_Pa': 2129, 'input_W': 200.4, 'COP': 1.45, 'excess_W': 89.27, 'temp_C': 379.0, 'heat_per_g': 1.6532, 'D_Ni': 0.014744},
+    {'date': '5/7',   'pressure_Pa': 2560, 'input_W': 200.4, 'COP': 1.45, 'excess_W': 90.04, 'temp_C': 378.68,'heat_per_g': 1.6675, 'D_Ni': 0.015345},
+    {'date': '5/8',   'pressure_Pa': 2726, 'input_W': 200.4, 'COP': 1.46, 'excess_W': 91.57, 'temp_C': 377.6, 'heat_per_g': 1.6956, 'D_Ni': 0.015911},
+    {'date': '5/9',   'pressure_Pa': 2800, 'input_W': 200.4, 'COP': 1.45, 'excess_W': 90.33, 'temp_C': 377.6, 'heat_per_g': 1.6728, 'D_Ni': 0.016462},
+    {'date': '5/10',  'pressure_Pa': 42,   'input_W': 200.3, 'COP': 1.45, 'excess_W': 89.61, 'temp_C': 374.0, 'heat_per_g': 1.6594, 'D_Ni': 0.016463},
+    {'date': '5/11',  'pressure_Pa': 2,    'input_W': 200.4, 'COP': 1.44, 'excess_W': 88.53, 'temp_C': 373.5, 'heat_per_g': 1.6394, 'D_Ni': 0.016464},
+    {'date': '5/13',  'pressure_Pa': 5,    'input_W': 100.3, 'COP': 1.35, 'excess_W': 35.09, 'temp_C': 235.0, 'heat_per_g': 0.6498, 'D_Ni': 0.016465},
+    {'date': '5/14',  'pressure_Pa': 6,    'input_W': 100.0, 'COP': 1.34, 'excess_W': 33.97, 'temp_C': 236.0, 'heat_per_g': 0.6291, 'D_Ni': 0.016464},
+    {'date': '5/15',  'pressure_Pa': 6,    'input_W': 99.7,  'COP': 1.37, 'excess_W': 36.41, 'temp_C': 236.0, 'heat_per_g': 0.6743, 'D_Ni': 0.016464},
+    {'date': '5/16',  'pressure_Pa': 6,    'input_W': 99.5,  'COP': 1.35, 'excess_W': 34.32, 'temp_C': 236.25,'heat_per_g': 0.6355, 'D_Ni': 0.016463},
+    {'date': '5/18',  'pressure_Pa': 7,    'input_W': 0.0,   'COP': None, 'excess_W': 2.11,  'temp_C': 23.64, 'heat_per_g': 0.0390, 'D_Ni': 0.016463},
+    {'date': '5/20',  'pressure_Pa': 8,    'input_W': 0.0,   'COP': None, 'excess_W': 2.89,  'temp_C': 23.07, 'heat_per_g': 0.0534, 'D_Ni': 0.016463},
+    {'date': '5/21',  'pressure_Pa': 5082, 'input_W': 98.3,  'COP': 1.36, 'excess_W': 35.28, 'temp_C': 232.0, 'heat_per_g': 0.6534, 'D_Ni': 0.016591},
+    {'date': '5/22',  'pressure_Pa': 4778, 'input_W': 98.2,  'COP': 1.34, 'excess_W': 33.82, 'temp_C': 232.0, 'heat_per_g': 0.6262, 'D_Ni': 0.016664},
+    {'date': '5/23',  'pressure_Pa': 4571, 'input_W': 98.1,  'COP': 1.35, 'excess_W': 34.49, 'temp_C': 232.2, 'heat_per_g': 0.6387, 'D_Ni': 0.016711},
+]
+
+# Mizuno R20 high-power tests (outside calorimeter)
+MIZUNO_R20_DATA = [
+    {'reactor': 'R13', 'input_W': 100,  'output_W': 112,  'COP': 1.12, 'excess_W': 12,   'notes': 'ICCF21 baseline'},
+    {'reactor': 'R19', 'input_W': 200,  'output_W': 290,  'COP': 1.45, 'excess_W': 90,   'notes': 'Table 1 average'},
+    {'reactor': 'R20', 'input_W': 50,   'output_W': 300,  'COP': 6.00, 'excess_W': 250,  'notes': 'Low power in calorimeter'},
+    {'reactor': 'R20', 'input_W': 300,  'output_W': 2250, 'COP': 7.50, 'excess_W': 1950, 'notes': 'Room heater test'},
+]
+
+# Heat-After-Death event (1991): 85 MJ from 100g Pd = 850 kJ/g
+MIZUNO_HEAT_AFTER_DEATH = {
+    'date': '1991-04-22',
+    'total_energy_MJ': 85,
+    'Pd_mass_g': 100,
+    'energy_density_kJg': 850,  # 27x gasoline equivalent
+    'water_evaporated_L': 37.5,
+    'duration_days': 15,
+}
+
+# Mizuno empirical formulas (from R19 data fitting)
+MIZUNO_EMPIRICAL = {
+    'temp_dependence': {
+        'formula': 'Excess_W/g = A * exp(B * T_abs)',
+        'A': 1.2e-6,
+        'B_per_K': 0.008,
+        'R2': 0.959,
+    },
+    'inverse_loading': {
+        'formula': 'Heat_W/g = C - D * (D/Ni)',
+        'C': 1.85,
+        'D': 12,
+    },
+    'pressure_dependence': 'No strong correlation (100-6000 Pa)',
+    'optimal_pressure_Pa': (100, 300),
+}
+
+# Mizuno reactor material properties
+MIZUNO_MATERIALS = {
+    'Ni_mesh': {'purity_pct': 99.6, 'wire_diameter_mm': 0.055, 'mesh_count': 180,
+                'weight_per_mesh_g': 18, 'total_Ni_g': 54},
+    'Pd_coating': {'method': 'rubbing', 'mass_per_layer_mg': 17.5,
+                   'layers': 3, 'total_mg': 52.5},
+    'D2_gas': {'loading_max_cm3': 176, 'optimal_D_Ni': 0.016,
+               'optimal_pressure_Pa': 200},
+}
+
+# =============================================================================
+# WIDOM-LARSEN THEORY PARAMETERS
+# Source: Widom & Larsen, Eur. Phys. J. C, 2006; Mizuno 2025 neutron data
+# =============================================================================
+WIDOM_LARSEN = {
+    'surface_EM_field_V_per_nm': 140,   # on Pd surface
+    'heavy_electron_energy_MeV': 0.78,
+    'ULMN_energy_MeV': 0.7,             # Ultra-Low-Momentum Neutrons (observed by Mizuno 2025)
+    'classical_DD_neutron_MeV': 2.45,   # NOT observed in LENR
+    'gamma_suppression': 'local_IR_conversion',  # micron scale
+    'charge_screening': 'neutral_ULMN',           # no Coulomb barrier for neutral particles
+}
+
+# Neutron observations (European J. Applied Physics, Aug 2025)
+NEUTRON_DATA = {
+    'classical_DD_2_45_MeV': {'observed': False, 'notes': 'Expected from D+D->3He+n, NOT seen'},
+    'ULMN_0_7_MeV': {'observed': True, 'notes': 'Ultra-Low-Momentum neutrons detected'},
+    'implication': 'Mechanism is NOT classical D-D fusion',
+}
+
+# Screening potential ranges (for ML feature engineering)
+SCREENING_RANGES = {
+    'gas_D2_eV': (20, 30),           # baseline, no enhancement
+    'Pd_metal_low_loading_eV': (200, 300),
+    'Pd_metal_optimal_eV': (400, 750),
+    'cluster_fusion_enhancement': 1e26,  # coherent deuteron motion (Takahashi)
+}
+
+# =============================================================================
 # PHYSICS ENGINE MODES
 # =============================================================================
 PHYSICS_MODES = {
