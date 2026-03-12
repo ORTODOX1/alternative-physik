@@ -48,6 +48,7 @@ from lenr_comprehensive_data import (
 )
 from cherepanov_engine import CherepanovEngine, cherepanov_features, MATERIAL_MAGNETIC
 from exfor_loader import EXFORLoader
+from alloy_predictor import AlloyPredictor, ELEMENT_DB, OXIDE_DB
 
 kB_eV = 8.617e-5  # eV/K
 kB_meV = kB_eV * 1000  # meV/K
@@ -1012,6 +1013,301 @@ class LENRDataGeneratorV2:
         return pd.DataFrame(records)
 
     # =========================================================================
+    # V4: ALLOY & COMPOSITE DATA
+    # =========================================================================
+    def generate_alloy_data(
+        self,
+        n_binary: int = 200,
+        n_ternary: int = 100,
+        n_composites: int = 80,
+        defect_variations: int = 3,
+    ) -> pd.DataFrame:
+        """Generate training data from alloy/composite predictions.
+
+        Creates synthetic samples for binary alloys, ternary alloys, and
+        metal/oxide composites across different defect concentrations.
+
+        Parameters
+        ----------
+        n_binary : int
+            Number of binary alloy samples (top-N from scan).
+        n_ternary : int
+            Number of ternary alloy samples.
+        n_composites : int
+            Number of metal/oxide composite samples.
+        defect_variations : int
+            Number of defect concentration levels per material.
+
+        Returns DataFrame with V3 features (72 columns) + targets.
+        """
+        predictor = AlloyPredictor()
+        records = []
+
+        # Defect concentrations to sweep
+        defect_levels = [0.01, 0.05, 0.10, 0.20, 0.35, 0.50][:defect_variations]
+
+        # ------- Binary alloys -------
+        binary_elements = ['Pd', 'Ni', 'Ti', 'Fe', 'Cu', 'Zr', 'Co', 'V',
+                           'Ta', 'Nb', 'W', 'Al', 'Cr', 'Mo', 'Mn']
+        binary_df = predictor.scan_binary_alloys(
+            elements=binary_elements,
+            fractions=[0.25, 0.50, 0.75],
+            defect_concentration=0.10,
+        )
+
+        # Take top-N binary by LENR score
+        top_binary = binary_df.head(n_binary)
+
+        for _, brow in top_binary.iterrows():
+            for dc in defect_levels:
+                record = self._alloy_prediction_to_record(
+                    predictor, brow, dc, 'binary_alloy',
+                )
+                if record:
+                    records.append(record)
+
+        # ------- Ternary alloys -------
+        ternary_elements = ['Pd', 'Ni', 'Ti', 'Fe', 'Zr', 'Co', 'Ta', 'Cu']
+        ternary_df = predictor.scan_ternary_alloys(
+            base_metals=ternary_elements,
+            defect_concentration=0.10,
+        )
+        top_ternary = ternary_df.head(n_ternary)
+
+        for _, trow in top_ternary.iterrows():
+            for dc in defect_levels:
+                record = self._alloy_prediction_to_record(
+                    predictor, trow, dc, 'ternary_alloy',
+                )
+                if record:
+                    records.append(record)
+
+        # ------- Metal/oxide composites -------
+        composite_metals = ['Pd', 'Ni', 'Ti', 'Fe', 'Zr', 'Co', 'Ta']
+        composite_oxides = list(OXIDE_DB.keys())
+        comp_df = predictor.scan_with_oxides(
+            base_metals=composite_metals,
+            oxides=composite_oxides,
+            defect_concentration=0.15,
+        )
+        top_comp = comp_df.head(n_composites)
+
+        for _, crow in top_comp.iterrows():
+            for dc in defect_levels:
+                record = self._composite_prediction_to_record(
+                    predictor, crow, dc,
+                )
+                if record:
+                    records.append(record)
+
+        if not records:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(records)
+        print(f"  Alloy data: {len(df)} rows "
+              f"(binary={len(top_binary)*len(defect_levels)}, "
+              f"ternary={len(top_ternary)*len(defect_levels)}, "
+              f"composites={len(top_comp)*len(defect_levels)})")
+        return df
+
+    def _alloy_prediction_to_record(
+        self,
+        predictor: 'AlloyPredictor',
+        row: pd.Series,
+        defect_conc: float,
+        alloy_type: str,
+    ) -> dict | None:
+        """Convert an alloy scan row to a training record with V3 features."""
+        alloy_name = row.get('alloy', 'Unknown')
+
+        # Parse composition from alloy name (e.g. "Pd50-Ni50")
+        components = {}
+        parts = alloy_name.replace(' ', '').split('-')
+        for part in parts:
+            # Extract element and fraction
+            elem = ''
+            frac_str = ''
+            for ch in part:
+                if ch.isalpha():
+                    elem += ch
+                else:
+                    frac_str += ch
+            if elem and elem in ELEMENT_DB:
+                frac = float(frac_str) / 100.0 if frac_str else 0.5
+                components[elem] = frac
+
+        if not components:
+            return None
+
+        # Normalize fractions
+        total = sum(components.values())
+        if total > 0:
+            components = {k: v / total for k, v in components.items()}
+
+        try:
+            pred = predictor.predict_lenr_potential(
+                components,
+                defect_concentration=defect_conc,
+            )
+        except Exception:
+            return None
+
+        # Use dominant element for material features
+        dominant = max(components, key=components.get)
+        mat_props = self._get_material_features(
+            dominant if dominant in MATERIALS_EXPANDED else 'Pd'
+        )
+
+        # Blended properties from alloy
+        alloy_props = pred.alloy_properties
+        if alloy_props is None:
+            return None
+        T_K = 340.0  # typical LENR operating temperature
+        D_loading = alloy_props.max_loading * 0.85  # near-optimal loading
+
+        # Surface treatment mapped from defect concentration
+        surface = 'none'
+        for surf, dc_val in SURFACE_TO_DEFECTS.items():
+            if abs(dc_val - defect_conc) < 0.02:
+                surface = surf
+                break
+
+        E_cm_keV = 0.025  # thermal energy
+        barrier_feats = self._calc_barrier_features(dominant, E_cm_keV, T_K, D_loading)
+        cherep_feats = self._get_cherepanov_features(
+            dominant, T_K, D_loading, surface, 0.0, E_cm_keV,
+        )
+
+        # Override screening with alloy prediction
+        barrier_feats['screening_energy_eV'] = pred.predicted_Us_eV
+
+        # Reaction probability from LENR score
+        reaction_prob = np.clip(pred.lenr_score / 100.0, 0.0, 0.95)
+
+        try:
+            D_coeff = self._calc_diffusion(dominant, T_K)
+        except Exception:
+            D_coeff = 1e-10
+        _, Ea_diff = self._get_diffusion_params(dominant)
+        debye_K = alloy_props.debye_K
+
+        excess_W = max(0.0, (pred.predicted_COP - 1.0) * 50.0)
+
+        record = {
+            'material': alloy_name,
+            **mat_props,
+            # Override with blended alloy values
+            'lattice_constant_A': alloy_props.a_eff_A,
+            'debye_temperature_K': alloy_props.debye_K,
+            'density_g_cm3': alloy_props.density_g_cm3,
+            'melting_point_K': alloy_props.melting_K,
+            'electron_density_A3': alloy_props.e_density_A3,
+            'hydrogen_isotope': 2,
+            'loading_ratio': D_loading,
+            'max_loading_capacity': alloy_props.max_loading,
+            'loading_method_encoded': METHOD_ENCODING.get('gas_loading', 0),
+            'loading_fraction': D_loading / max(alloy_props.max_loading, 0.01),
+            'above_McKubre_threshold': int(D_loading > 0.84),
+            'above_Storms_threshold': int(D_loading > 0.90),
+            'phase_encoded': self._determine_phase(dominant, D_loading),
+            'H_absorption_enthalpy_eV': MATERIALS_EXPANDED.get(dominant, {}).get(
+                'H_absorption_enthalpy_eV', -0.2),
+            'lattice_expansion_pct': self._lattice_expansion(dominant, D_loading),
+            **barrier_feats,
+            'temperature_K': T_K,
+            'pressure_Pa': 1e5,
+            'beam_energy_keV': E_cm_keV,
+            'input_power_W': 50.0,
+            'heating_rate_K_per_min': 0,
+            'diffusion_coefficient': D_coeff,
+            'diffusion_activation_eV': Ea_diff,
+            'thermal_phonon_energy_meV': kB_meV * debye_K,
+            'current_density_A_cm2': 0,
+            'cell_voltage_V': 0,
+            'electrolyte_encoded': 0,
+            'cathode_area_cm2': 1.0,
+            'overpotential_V': 0,
+            'surface_treatment_encoded': SURFACE_ENCODING.get(surface, 0),
+            'particle_size_nm': 0,
+            'n_layers': 0,
+            'coating_thickness_nm': 0,
+            'surface_area_ratio': 1.0,
+            'nanostructure_flag': int(defect_conc > 0.25),
+            'laser_stimulation': 0,
+            'rf_stimulation': 0,
+            'applied_B_field_T': 0,
+            'ultrasound_stimulation': 0,
+            'experiment_duration_hours': 100,
+            'incubation_time_hours': 10,
+            'COP': pred.predicted_COP,
+            'data_source_encoded': 5,  # alloy_prediction
+            **cherep_feats,
+            # Targets
+            'reaction_occurred': int(reaction_prob > 0.3),
+            'excess_heat_detected': int(reaction_prob > 0.4),
+            'He4_detected': int(reaction_prob > 0.6 and 'Pd' in components),
+            'tritium_detected': 0,
+            'neutron_detected': 0,
+            'transmutation_detected': 0,
+            'excess_heat_W': excess_W,
+            'neutron_rate_cpm': 0,
+            'energy_density_kJ_g': 0,
+            # Metadata
+            'data_source': 'alloy_prediction',
+            'method': 'gas_loading',
+            'gas': 'D2',
+            'alloy_type': alloy_type,
+            'defect_concentration': defect_conc,
+            'lenr_score': pred.lenr_score,
+        }
+        return record
+
+    def _composite_prediction_to_record(
+        self,
+        predictor: 'AlloyPredictor',
+        row: pd.Series,
+        defect_conc: float,
+    ) -> dict | None:
+        """Convert a composite scan row to a training record."""
+        metal = row.get('metal', 'Pd')
+        oxide = row.get('oxide', 'ZrO2')
+        oxide_frac = row.get('oxide_fraction', 0.10)
+
+        try:
+            pred = predictor.predict_lenr_potential(
+                {metal: 1.0},
+                oxide_matrix=oxide,
+                oxide_fraction=oxide_frac,
+                defect_concentration=defect_conc,
+            )
+        except Exception:
+            return None
+
+        # Reuse alloy prediction logic with single-element composition
+        mock_row = pd.Series({
+            'alloy': f'{metal}/{oxide}({int(oxide_frac*100)}%)',
+        })
+
+        record = self._alloy_prediction_to_record(
+            predictor,
+            pd.Series({'alloy': metal}),
+            defect_conc,
+            'metal_oxide_composite',
+        )
+        if record:
+            record['material'] = f'{metal}/{oxide}({int(oxide_frac*100)}%)'
+            record['data_source'] = 'composite_prediction'
+            record['alloy_type'] = 'metal_oxide_composite'
+            record['screening_energy_eV'] = pred.predicted_Us_eV
+            record['COP'] = pred.predicted_COP
+            record['excess_heat_W'] = max(0.0, (pred.predicted_COP - 1.0) * 50.0)
+            record['lenr_score'] = pred.lenr_score
+            reaction_prob = np.clip(pred.lenr_score / 100.0, 0.0, 0.95)
+            record['reaction_occurred'] = int(reaction_prob > 0.3)
+            record['excess_heat_detected'] = int(reaction_prob > 0.4)
+        return record
+
+    # =========================================================================
     # COMBINED DATASET
     # =========================================================================
     def generate_combined(
@@ -1022,6 +1318,7 @@ class LENRDataGeneratorV2:
         include_mizuno_neutron: bool = True,
         include_real_excess_heat: bool = True,
         include_exfor: bool = False,
+        include_alloys: bool = False,
         use_v3_features: bool = False,
     ) -> pd.DataFrame:
         """Generate combined dataset with all sources.
@@ -1034,6 +1331,8 @@ class LENRDataGeneratorV2:
             Gaussian noise level for synthetic data.
         include_exfor : bool
             If True, include EXFOR D-D cross-section data (~85+ points).
+        include_alloys : bool
+            If True, include alloy/composite prediction data (~1000+ points).
         use_v3_features : bool
             If True, use V3 feature set (72 features). If False, drop
             Cherepanov columns for backward-compatible V2 (64 features).
@@ -1073,6 +1372,16 @@ class LENRDataGeneratorV2:
                 print(f"  EXFOR points: {len(exfor)}")
                 frames.append(exfor)
 
+        # V4: Alloy/composite prediction data
+        if include_alloys:
+            print("Adding alloy/composite prediction data...")
+            alloy_data = self.generate_alloy_data(
+                n_binary=150, n_ternary=80, n_composites=60,
+                defect_variations=3,
+            )
+            if len(alloy_data) > 0:
+                frames.append(alloy_data)
+
         # Find common columns and merge
         common_cols = set(frames[0].columns)
         for f in frames[1:]:
@@ -1096,8 +1405,10 @@ class LENRDataGeneratorV2:
             print(f"  Mizuno R19: {len(mizuno)}")
         if include_mizuno_neutron:
             print(f"  Mizuno neutron: {len(neutron)}")
-        if include_exfor and len(exfor) > 0:
+        if include_exfor and 'exfor' in dir() and len(exfor) > 0:
             print(f"  EXFOR: {len(exfor)}")
+        if include_alloys and 'alloy_data' in dir() and len(alloy_data) > 0:
+            print(f"  Alloy/composite: {len(alloy_data)}")
         print(f"  V3 features: {'YES (72)' if use_v3_features else 'NO (V2 compat, 64)'}")
 
         return combined
@@ -1143,11 +1454,12 @@ if __name__ == '__main__':
     v2_present = [c for c in v2_cols if c in df_v2.columns]
     print(f"V2 feature coverage: {len(v2_present)}/{len(v2_cols)}")
 
-    # === V3 with EXFOR ===
-    print("\n--- V3 mode (72 features + EXFOR) ---")
+    # === V3 with EXFOR + Alloys ===
+    print("\n--- V3 mode (72 features + EXFOR + Alloys) ---")
     df_v3 = gen.generate_combined(
         n_synthetic=500,
         include_exfor=True,
+        include_alloys=True,
         use_v3_features=True,
     )
     v3_cols = gen.get_feature_columns_v3()
