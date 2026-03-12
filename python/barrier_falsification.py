@@ -60,6 +60,20 @@ MATERIAL_PROPERTIES = {
     'C':          {'Z': 6,   'e_density': 0.0,    'theta_D': 2230,'a': 3.567,  'chi_m': -6.2e-6,  'fermi_E': 0,     'mag_class': 'diamagnetic',  'structure': 'diamond'},
     'Si':         {'Z': 14,  'e_density': 0.0,    'theta_D': 645, 'a': 5.431,  'chi_m': -3.2e-6,  'fermi_E': 0,     'mag_class': 'diamagnetic',  'structure': 'diamond'},
     'Ge':         {'Z': 32,  'e_density': 0.0,    'theta_D': 374, 'a': 5.658,  'chi_m': -7.7e-6,  'fermi_E': 0,     'mag_class': 'diamagnetic',  'structure': 'diamond'},
+    # === Raiola 2002 metals (newly added) ===
+    'Mg':         {'Z': 12,  'e_density': 0.013,  'theta_D': 400, 'a': 3.209,  'chi_m': 13.1e-6,  'fermi_E': 7.08,  'mag_class': 'paramagnetic', 'structure': 'HCP'},
+    'Zn':         {'Z': 30,  'e_density': 0.013,  'theta_D': 327, 'a': 2.665,  'chi_m': -11.4e-6, 'fermi_E': 9.47,  'mag_class': 'diamagnetic',  'structure': 'HCP'},
+    'Y':          {'Z': 39,  'e_density': 0.038,  'theta_D': 280, 'a': 3.648,  'chi_m': 187e-6,   'fermi_E': 3.19,  'mag_class': 'paramagnetic', 'structure': 'HCP'},
+    'Mo':         {'Z': 42,  'e_density': 0.064,  'theta_D': 450, 'a': 3.147,  'chi_m': 72e-6,    'fermi_E': 6.82,  'mag_class': 'paramagnetic', 'structure': 'BCC'},
+    'Ru':         {'Z': 44,  'e_density': 0.074,  'theta_D': 600, 'a': 2.706,  'chi_m': 39e-6,    'fermi_E': 6.52,  'mag_class': 'paramagnetic', 'structure': 'HCP'},
+    'Rh':         {'Z': 45,  'e_density': 0.076,  'theta_D': 480, 'a': 3.803,  'chi_m': 102e-6,   'fermi_E': 5.37,  'mag_class': 'paramagnetic', 'structure': 'FCC'},
+    'Cd':         {'Z': 48,  'e_density': 0.031,  'theta_D': 209, 'a': 2.979,  'chi_m': -18e-6,   'fermi_E': 7.47,  'mag_class': 'diamagnetic',  'structure': 'HCP'},
+    'Hf':         {'Z': 72,  'e_density': 0.044,  'theta_D': 252, 'a': 3.195,  'chi_m': 75e-6,    'fermi_E': 5.00,  'mag_class': 'paramagnetic', 'structure': 'HCP'},
+    'Re':         {'Z': 75,  'e_density': 0.069,  'theta_D': 416, 'a': 2.761,  'chi_m': 67e-6,    'fermi_E': 6.10,  'mag_class': 'paramagnetic', 'structure': 'HCP'},
+    'Ir':         {'Z': 77,  'e_density': 0.072,  'theta_D': 420, 'a': 3.839,  'chi_m': 25e-6,    'fermi_E': 5.60,  'mag_class': 'paramagnetic', 'structure': 'FCC'},
+    'Pb':         {'Z': 82,  'e_density': 0.013,  'theta_D': 105, 'a': 4.951,  'chi_m': -15.5e-6, 'fermi_E': 9.47,  'mag_class': 'diamagnetic',  'structure': 'FCC'},
+    'B':          {'Z': 5,   'e_density': 0.0,    'theta_D': 1480,'a': 8.73,   'chi_m': -6.7e-6,  'fermi_E': 0,     'mag_class': 'diamagnetic',  'structure': 'rhombohedral'},
+    'BeO':        {'Z': 4,   'e_density': 0.0,    'theta_D': 1280,'a': 2.698,  'chi_m': -1.0e-5,  'fermi_E': 0,     'mag_class': 'diamagnetic',  'structure': 'HCP'},
 }
 
 # Defect state → concentration mapping

@@ -102,11 +102,25 @@ MATERIAL_MAGNETIC = {
     'C':   {'chi_m': -6.2e-6,  'class': 'diamagnetic'},
     'Si':  {'chi_m': -3.2e-6,  'class': 'diamagnetic'},
     'Ge':  {'chi_m': -7.7e-6,  'class': 'diamagnetic'},
+    # === Raiola 2002 metals (newly added) ===
+    'Mg':  {'chi_m': 13.1e-6,  'class': 'paramagnetic'},
+    'Zn':  {'chi_m': -11.4e-6, 'class': 'diamagnetic'},
+    'Y':   {'chi_m': 187e-6,   'class': 'paramagnetic'},
+    'Mo':  {'chi_m': 72e-6,    'class': 'paramagnetic'},
+    'Ru':  {'chi_m': 39e-6,    'class': 'paramagnetic'},
+    'Rh':  {'chi_m': 102e-6,   'class': 'paramagnetic'},
+    'Cd':  {'chi_m': -18e-6,   'class': 'diamagnetic'},
+    'Hf':  {'chi_m': 75e-6,    'class': 'paramagnetic'},
+    'Re':  {'chi_m': 67e-6,    'class': 'paramagnetic'},
+    'Ir':  {'chi_m': 25e-6,    'class': 'paramagnetic'},
+    'Pb':  {'chi_m': -15.5e-6, 'class': 'diamagnetic'},
+    'B':   {'chi_m': -6.7e-6,  'class': 'diamagnetic'},
     # Compounds / alloys
     'PdO':        {'chi_m': 1.2e-4,  'class': 'paramagnetic'},
     'SUS304':     {'chi_m': 1.01e-2, 'class': 'paramagnetic'},
     'Constantan': {'chi_m': 2.8e-5,  'class': 'paramagnetic'},
     'Be_BeO':     {'chi_m': 5.0e-5,  'class': 'paramagnetic'},
+    'BeO':        {'chi_m': -1.0e-5, 'class': 'diamagnetic'},
 }
 
 # Lattice parameters for materials (a in Å, θ_D in K, structure)
@@ -132,11 +146,25 @@ MATERIAL_LATTICE = {
     'In':  {'a': 3.2523, 'theta_D': 108, 'structure': 'BCT', 'density': 7.31},
     'Be':  {'a': 2.2858, 'theta_D': 1440, 'structure': 'HCP', 'density': 1.85},
     'Er':  {'a': 3.5592, 'theta_D': 168, 'structure': 'HCP', 'density': 9.07},
+    # === Raiola 2002 metals (newly added) ===
+    'Mg':  {'a': 3.2094, 'theta_D': 400, 'structure': 'HCP', 'density': 1.74},
+    'Zn':  {'a': 2.6650, 'theta_D': 327, 'structure': 'HCP', 'density': 7.13},
+    'Y':   {'a': 3.6482, 'theta_D': 280, 'structure': 'HCP', 'density': 4.47},
+    'Mo':  {'a': 3.1470, 'theta_D': 450, 'structure': 'BCC', 'density': 10.28},
+    'Ru':  {'a': 2.7059, 'theta_D': 600, 'structure': 'HCP', 'density': 12.37},
+    'Rh':  {'a': 3.8034, 'theta_D': 480, 'structure': 'FCC', 'density': 12.41},
+    'Cd':  {'a': 2.9793, 'theta_D': 209, 'structure': 'HCP', 'density': 8.65},
+    'Hf':  {'a': 3.1946, 'theta_D': 252, 'structure': 'HCP', 'density': 13.31},
+    'Re':  {'a': 2.7610, 'theta_D': 416, 'structure': 'HCP', 'density': 21.02},
+    'Ir':  {'a': 3.8394, 'theta_D': 420, 'structure': 'FCC', 'density': 22.56},
+    'Pb':  {'a': 4.9508, 'theta_D': 105, 'structure': 'FCC', 'density': 11.34},
+    'B':   {'a': 8.73,   'theta_D': 1480, 'structure': 'rhombohedral', 'density': 2.34},
     # Compounds
     'PdO':        {'a': 3.04,  'theta_D': 300, 'structure': 'FCC', 'density': 8.3},
     'SUS304':     {'a': 3.59,  'theta_D': 350, 'structure': 'FCC', 'density': 8.0},
     'Constantan': {'a': 3.57,  'theta_D': 340, 'structure': 'FCC', 'density': 8.9},
     'Be_BeO':     {'a': 2.70,  'theta_D': 1000, 'structure': 'HCP', 'density': 2.5},
+    'BeO':        {'a': 2.6980, 'theta_D': 1280, 'structure': 'HCP', 'density': 3.01},
 }
 
 
