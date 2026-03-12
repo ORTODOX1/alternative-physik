@@ -48,6 +48,18 @@ SCREENING_EXPERIMENTAL = {
     'BeO':  {'Us_eV': 180, 'error_eV': 40,  'source': 'NASA TP-2020'},
     'Pt':   {'Us_eV': 122, 'error_eV': 20,  'source': 'Raiola'},
     'C':    {'Us_eV': 25,  'error_eV': 5,   'source': 'Huke (no enhancement)'},
+    # Additional screening data (Raiola 2004, Czerski 2001-2004)
+    'V':    {'Us_eV': 316, 'error_eV': 25,  'source': 'Raiola'},
+    'Nb':   {'Us_eV': 284, 'error_eV': 20,  'source': 'Raiola'},
+    'Sn':   {'Us_eV': 130, 'error_eV': 18,  'source': 'Raiola'},
+    'In':   {'Us_eV': 165, 'error_eV': 22,  'source': 'Raiola'},
+    'Mn':   {'Us_eV': 246, 'error_eV': 30,  'source': 'Raiola'},
+    'Co':   {'Us_eV': 240, 'error_eV': 30,  'source': 'Raiola'},
+    'Cr':   {'Us_eV': 181, 'error_eV': 20,  'source': 'Raiola'},
+    'Cu':   {'Us_eV': 43,  'error_eV': 10,  'source': 'Czerski 2001'},
+    'W':    {'Us_eV': 74,  'error_eV': 12,  'source': 'Raiola'},
+    'Ag':   {'Us_eV': 91,  'error_eV': 15,  'source': 'Raiola'},
+    'Constantan': {'Us_eV': 230, 'error_eV': 40, 'source': 'Estimated (Cu55-Ni45 weighted)'},
 }
 
 # =============================================================================
@@ -109,6 +121,15 @@ LATTICE = {
     # SUS304 (AISI 304) stainless steel — Mizuno neutron experiments
     'SUS304': {'structure': 'FCC', 'a_A': 3.5950, 'r_atom_A': 1.27, 'debye_K': 400,
                'e_density_A3': 0.14, 'composition': 'Fe69-Cr19-Ni10-Mn2'},
+    # Additional materials for expanded dataset
+    'Zr': {'structure': 'HCP', 'a_A': 3.2316, 'c_A': 5.1477, 'r_atom_A': 1.602, 'debye_K': 291,
+            'e_density_A3': 0.043},
+    'Ta': {'structure': 'BCC', 'a_A': 3.3013, 'r_atom_A': 1.430, 'debye_K': 240,
+            'e_density_A3': 0.055},
+    'Constantan': {'structure': 'FCC', 'a_A': 3.57, 'r_atom_A': 1.27, 'debye_K': 350,
+                   'e_density_A3': 0.10, 'composition': 'Cu55-Ni45'},
+    'PdO': {'structure': 'tetragonal', 'a_A': 3.043, 'c_A': 5.337, 'debye_K': 300,
+            'e_density_A3': 0.40},
 }
 
 # Deuterium diffusion: D(T) = D0 * exp(-Ea / kB*T)
@@ -117,6 +138,12 @@ DIFFUSION = {
     'Ni': {'D0_cm2s': 2.4e-2, 'Ea_eV': 0.457, 'D_300K': 5e-10},
     'Fe': {'D0_cm2s': 7.4e-4, 'Ea_eV': 0.041, 'D_300K': 1.5e-5},
     'Ti': {'D0_cm2s': 2e-3,   'Ea_eV': 0.34,  'D_300K': 3e-9},
+    'Zr': {'D0_cm2s': 1e-3,   'Ea_eV': 0.40,  'D_300K': 2e-10},
+    'Ta': {'D0_cm2s': 4.4e-4, 'Ea_eV': 0.14,  'D_300K': 2e-6},
+    'Cu': {'D0_cm2s': 1e-2,   'Ea_eV': 0.40,  'D_300K': 2e-9},
+    'W':  {'D0_cm2s': 4.1e-3, 'Ea_eV': 0.39,  'D_300K': 3e-10},
+    'Au': {'D0_cm2s': 5e-3,   'Ea_eV': 0.23,  'D_300K': 1.2e-7},
+    'Pt': {'D0_cm2s': 3e-3,   'Ea_eV': 0.26,  'D_300K': 1e-8},
 }
 
 # Loading parameters
