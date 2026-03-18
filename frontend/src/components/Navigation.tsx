@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/experiments', label: 'Эксперименты', icon: '◉' },
   { href: '/simulator', label: 'Симулятор', icon: '▶' },
   { href: '/tsc', label: 'TSC', icon: '✦' },
+  { href: '/3d', label: '3D Lab', icon: '🔮' },
 ];
 
 export default function Navigation() {
