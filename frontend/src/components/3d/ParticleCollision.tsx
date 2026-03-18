@@ -97,78 +97,70 @@ function ExplosionParticles({ active, position }: { active: boolean, position: [
   )
 }
 
-// The wall/barrier between particles
-function Barrier({ height, defects, mode }: { height: number, defects: number, mode: string }) {
+// Cherepanov lattice barrier with holes
+function CherepanovBarrier({ height, defects }: { height: number, defects: number }) {
+  const gridSize = 8
+  const cellSize = 0.5
+  const holes = useMemo(() => {
+    const set = new Set<string>()
+    const numHoles = Math.floor(defects * gridSize * gridSize)
+    while (set.size < numHoles) {
+      const r = Math.floor(Math.random() * gridSize)
+      const c = Math.floor(Math.random() * gridSize)
+      set.add(`${r}-${c}`)
+    }
+    return set
+  }, [defects])
+
+  return (
+    <group position={[0, 0, 0]}>
+      {Array.from({ length: gridSize }).map((_, row) =>
+        Array.from({ length: gridSize }).map((_, col) => {
+          const isHole = holes.has(`${row}-${col}`)
+          const y = (row - gridSize / 2 + 0.5) * cellSize
+          const z = (col - gridSize / 2 + 0.5) * cellSize
+          return isHole ? (
+            <mesh key={`${row}-${col}`} position={[0, y, z]}>
+              <boxGeometry args={[0.1, cellSize * 0.8, cellSize * 0.8]} />
+              <meshBasicMaterial color="#00ff44" transparent opacity={0.3} wireframe />
+            </mesh>
+          ) : (
+            <mesh key={`${row}-${col}`} position={[0, y, z]}>
+              <boxGeometry args={[0.15 * height, cellSize * 0.8, cellSize * 0.8]} />
+              <meshStandardMaterial color="#6666aa" metalness={0.6} roughness={0.3} transparent opacity={0.6} />
+            </mesh>
+          )
+        })
+      )}
+    </group>
+  )
+}
+
+// Maxwell solid wall barrier
+function MaxwellBarrier({ height }: { height: number }) {
   const ref = useRef<THREE.Mesh>(null)
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     if (ref.current) {
-      // Pulse effect
       const mat = ref.current.material as THREE.MeshStandardMaterial
       mat.opacity = 0.15 + Math.sin(Date.now() * 0.003) * 0.05
     }
   })
 
-  if (mode === 'cherepanov') {
-    // Cherepanov: barrier is a lattice grid with holes (defects)
-    const gridSize = 8
-    const cellSize = 0.5
-    const holes = useMemo(() => {
-      const set = new Set<string>()
-      const numHoles = Math.floor(defects * gridSize * gridSize)
-      while (set.size < numHoles) {
-        const r = Math.floor(Math.random() * gridSize)
-        const c = Math.floor(Math.random() * gridSize)
-        set.add(`${r}-${c}`)
-      }
-      return set
-    }, [defects])
-
-    return (
-      <group position={[0, 0, 0]}>
-        {Array.from({ length: gridSize }).map((_, row) =>
-          Array.from({ length: gridSize }).map((_, col) => {
-            const isHole = holes.has(`${row}-${col}`)
-            const y = (row - gridSize / 2 + 0.5) * cellSize
-            const z = (col - gridSize / 2 + 0.5) * cellSize
-            return isHole ? (
-              // Hole — glowing gap
-              <mesh key={`${row}-${col}`} position={[0, y, z]}>
-                <boxGeometry args={[0.1, cellSize * 0.8, cellSize * 0.8]} />
-                <meshBasicMaterial color="#00ff44" transparent opacity={0.3} wireframe />
-              </mesh>
-            ) : (
-              // Solid block
-              <mesh key={`${row}-${col}`} position={[0, y, z]}>
-                <boxGeometry args={[0.15 * height, cellSize * 0.8, cellSize * 0.8]} />
-                <meshStandardMaterial
-                  color="#6666aa"
-                  metalness={0.6}
-                  roughness={0.3}
-                  transparent
-                  opacity={0.6}
-                />
-              </mesh>
-            )
-          })
-        )}
-      </group>
-    )
-  }
-
-  // Maxwell: solid glowing wall
   return (
     <mesh ref={ref} position={[0, 0, 0]}>
       <boxGeometry args={[0.3 * height, 4, 4]} />
-      <meshStandardMaterial
-        color="#ff4444"
-        emissive="#ff2222"
-        emissiveIntensity={0.5 * height}
-        transparent
-        opacity={0.2}
-      />
+      <meshStandardMaterial color="#ff4444" emissive="#ff2222" emissiveIntensity={0.5 * height} transparent opacity={0.2} />
     </mesh>
   )
+}
+
+// The wall/barrier between particles
+function Barrier({ height, defects, mode }: { height: number, defects: number, mode: string }) {
+  if (mode === 'cherepanov') {
+    return <CherepanovBarrier height={height} defects={defects} />
+  }
+  return <MaxwellBarrier height={height} />
 }
 
 export default function ParticleCollision({
