@@ -45,7 +45,7 @@ export default function Navigation() {
               );
             })}
             <a
-              href="https://github.com/synizia"
+              href="https://github.com/ORTODOX1/Syniz"
               target="_blank"
               rel="noopener noreferrer"
               className="ml-2 px-3 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"

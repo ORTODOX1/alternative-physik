@@ -101,7 +101,7 @@ Inspired by [MiroFish](https://github.com/666ghj/MiroFish) multi-agent simulatio
 
 **TRIZ Contradiction:** The barrier must exist (Rutherford scattering works) AND must not exist (18,200 eV screening). **Resolution:** It exists in vacuum, vanishes in engineered media.
 
-> **Framework:** [Syniz — TRIZ AI Framework](https://github.com/synizia/syniz)
+> **Framework:** [Syniz — TRIZ AI Framework](https://github.com/ORTODOX1/Syniz)
 
 ---
 
@@ -260,7 +260,7 @@ Open source. Reproducible. Every dataset, model, and line of code — public. Be
 
 <div align="center">
 
-**[See the Proof](https://alternative-physik.vercel.app)** · **[Run in Colab](https://colab.research.google.com/github/ORTODOX1/alternative-physik/blob/main/python/notebooks/training.ipynb)** · **[Syniz AI](https://github.com/synizia/syniz)** · **[MiroFish](https://github.com/666ghj/MiroFish)**
+**[See the Proof](https://alternative-physik.vercel.app)** · **[Run in Colab](https://colab.research.google.com/github/ORTODOX1/alternative-physik/blob/main/python/notebooks/training.ipynb)** · **[Syniz AI](https://github.com/ORTODOX1/Syniz)** · **[MiroFish](https://github.com/666ghj/MiroFish)**
 
 *Built for SpaceX · xAI · TerraFab · and everyone who questions the fundamentals*
 

@@ -153,7 +153,7 @@ export default function LandingPage() {
             <Link href="/3d" className="px-8 py-3.5 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-semibold rounded-xl transition-all text-lg">
               3D Nuclear Lab
             </Link>
-            <a href="https://github.com/synizia/syniz" target="_blank" rel="noopener noreferrer" className="px-8 py-3.5 border border-amber-600/50 hover:border-amber-400 text-amber-400 hover:text-amber-300 font-semibold rounded-xl transition-all text-lg">
+            <a href="https://github.com/ORTODOX1/Syniz" target="_blank" rel="noopener noreferrer" className="px-8 py-3.5 border border-amber-600/50 hover:border-amber-400 text-amber-400 hover:text-amber-300 font-semibold rounded-xl transition-all text-lg">
               Syniz AI Framework
             </a>
           </div>
@@ -397,7 +397,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <a href="https://github.com/synizia/syniz" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/ORTODOX1/Syniz" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold hover:bg-emerald-500/25 transition-all">
               \u2197 Syniz &mdash; TRIZ AI Framework
             </a>
@@ -484,7 +484,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
-            <a href="https://github.com/synizia" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/ORTODOX1/Syniz" target="_blank" rel="noopener noreferrer"
               className="px-8 py-3.5 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all text-lg">
               GitHub &rarr;
             </a>
@@ -515,7 +515,7 @@ export default function LandingPage() {
                 Data: IAEA EXFOR &middot; Materials Project &middot; AFLOW &middot; COD &middot; ENDF/B &middot; NOMAD &middot; OQMD &middot; NIST
               </p>
               <p className="text-gray-700 text-xs mt-1">
-                AI: <a href="https://github.com/synizia/syniz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-400">Syniz</a> &middot;{' '}
+                AI: <a href="https://github.com/ORTODOX1/Syniz" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-400">Syniz</a> &middot;{' '}
                 <a href="https://github.com/666ghj/MiroFish" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-400">MiroFish</a>
               </p>
             </div>
