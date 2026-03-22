@@ -61,13 +61,13 @@ const IMPLICATIONS = [
     for: 'xAI \u00b7 NVIDIA \u00b7 TSMC',
   },
   {
-    icon: '\ud83d\ude80', company: 'Space Propulsion',
+    icon: '🚀', company: 'Space Propulsion',
     tagline: 'Fusion without tokamaks',
     desc: 'No barrier = no need for 150M\u00b0C plasma. Material-engineered fusion at moderate temperatures. Specific impulse: 10\u2074\u201310\u2075 seconds vs 450s (chemical). Interplanetary travel in weeks, not months.',
     for: 'SpaceX \u00b7 NASA \u00b7 Blue Origin',
   },
   {
-    icon: '\ud83e\udde0', company: 'AI-Driven Discovery',
+    icon: '🧠', company: 'AI-Driven Discovery',
     tagline: 'Physics agents find what humans missed',
     desc: 'Multi-agent AI systems (TRIZ-trained) analyze nuclear data from competing theoretical frameworks. 5 AI physicists debate, find consensus. This is how we discovered the 607x anomaly that 50 years of theory missed.',
     for: 'xAI \u00b7 DeepMind \u00b7 Anthropic',
@@ -88,7 +88,7 @@ const DATA_SOURCES = [
 
 const TOOLS = [
   { href: '/simulator', title: 'Live Simulator', desc: 'Three physics engines. Real-time comparison. Your parameters.', icon: '\u25b6', gradient: 'from-purple-500/20 to-blue-500/20' },
-  { href: '/3d', title: '3D Nuclear Lab', desc: 'Crystal lattice, particle collisions, periodic table in 3D.', icon: '\ud83d\udd2e', gradient: 'from-cyan-500/20 to-emerald-500/20' },
+  { href: '/3d', title: '3D Nuclear Lab', desc: 'Crystal lattice, particle collisions, periodic table in 3D.', icon: '🔮', gradient: 'from-cyan-500/20 to-emerald-500/20' },
   { href: '/physics', title: 'Physics Models', desc: 'Maxwell vs Coulomb (1785) vs Cherepanov. Side by side.', icon: '\u269b', gradient: 'from-amber-500/20 to-red-500/20' },
   { href: '/experiments', title: 'Experimental Database', desc: '26+ experiments. 7 labs. All data open.', icon: '\u25c9', gradient: 'from-rose-500/20 to-pink-500/20' },
 ];
@@ -351,7 +351,7 @@ export default function LandingPage() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 mb-20">
         <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-blue-500/5 p-8">
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-3xl">\ud83e\udde0</span>
+            <span className="text-3xl">&#x1F9E0;</span>
             <div>
               <h2 className="text-2xl font-bold text-white">AI Agents + TRIZ Methodology</h2>
               <p className="text-emerald-400 text-sm font-medium">MiroFish for Physics</p>
@@ -368,11 +368,11 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8">
             {[
-              { role: 'Maxwell Advocate', color: 'blue', emoji: '\ud83d\udd35' },
-              { role: 'Coulomb Originalist', color: 'amber', emoji: '\ud83d\udfe1' },
-              { role: 'Medium Theorist', color: 'emerald', emoji: '\ud83d\udfe2' },
-              { role: 'Experimental Skeptic', color: 'red', emoji: '\ud83d\udd34' },
-              { role: 'ML Analyst', color: 'purple', emoji: '\ud83d\udfe3' },
+              { role: 'Maxwell Advocate', color: 'blue', emoji: '🔵' },
+              { role: 'Coulomb Originalist', color: 'amber', emoji: '🟡' },
+              { role: 'Medium Theorist', color: 'emerald', emoji: '🟢' },
+              { role: 'Experimental Skeptic', color: 'red', emoji: '🔴' },
+              { role: 'ML Analyst', color: 'purple', emoji: '🟣' },
             ].map((agent) => (
               <div key={agent.role} className="rounded-xl bg-[#12121f] border border-[#2a2a40] p-4 text-center">
                 <div className="text-2xl mb-2">{agent.emoji}</div>
