@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Обзор', icon: '◈' },
-  { href: '/physics', label: 'Физика', icon: '⚛' },
-  { href: '/materials', label: 'Материалы', icon: '◆' },
-  { href: '/experiments', label: 'Эксперименты', icon: '◉' },
-  { href: '/simulator', label: 'Симулятор', icon: '▶' },
+  { href: '/', label: 'Overview', icon: '◈' },
+  { href: '/physics', label: 'Models', icon: '⚛' },
+  { href: '/materials', label: 'Materials', icon: '◆' },
+  { href: '/experiments', label: 'Data', icon: '◉' },
+  { href: '/simulator', label: 'Simulator', icon: '▶' },
   { href: '/tsc', label: 'TSC', icon: '✦' },
   { href: '/3d', label: '3D Lab', icon: '🔮' },
 ];
@@ -22,8 +22,8 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-14">
           <Link href="/" className="flex items-center gap-2 text-white font-semibold text-lg">
             <span className="text-blue-400 text-xl">⚡</span>
-            <span className="hidden sm:inline">LENR Simulator</span>
-            <span className="sm:hidden">LENR</span>
+            <span className="hidden sm:inline">Nuclear Sim</span>
+            <span className="sm:hidden">NSim</span>
           </Link>
 
           <div className="flex items-center gap-1">
@@ -44,6 +44,15 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            <a
+              href="https://github.com/synizia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 px-3 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+            >
+              <span className="mr-1">↗</span>
+              <span className="hidden lg:inline">GitHub</span>
+            </a>
           </div>
         </div>
       </div>
